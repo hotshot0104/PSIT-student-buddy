@@ -1,51 +1,123 @@
 {
-  "last_updated": "2026-07-12T16:55:00.000000+05:30",
+  "last_updated": "2026-07-12T16:57:21.734796+05:30",
   "student": {
-    "name": "Sameer (ERP Locked)",
-    "roll": "2401641530046",
-    "branch": "Computer Science (Sem 5)"
+    "name": "2401640130049",
+    "roll": "2401640130049",
+    "branch": "PSIT Student"
   },
   "attendance": {
-    "overall": 78.33,
-    "percent": "78.33%",
-    "present": 94,
-    "total": 120,
+    "overall": 100.0,
+    "percent": "100.00%",
+    "present": 40,
+    "total": 40,
     "subjects": [
       {
-        "name": "BCS-502 (Ashish Tripathi)",
-        "percent": 85.71,
-        "present": 18,
-        "total": 21
+        "name": "BCS-055 (Piyush Bhushan Singh)",
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
       },
       {
         "name": "BCS-501 (Esha Tripathi)",
-        "percent": 76.19,
-        "present": 16,
-        "total": 21
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
       },
       {
-        "name": "BIT-052 (Vatsya Tiwari)",
-        "percent": 71.43,
-        "present": 15,
-        "total": 21
+        "name": "BCS-502 (Ashish Tripathi)",
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
       },
       {
-        "name": "TT-DBMS-501 (Esha Tripathi)",
-        "percent": 80.00,
-        "present": 20,
-        "total": 25
-      },
-      {
-        "name": "BCS-055 (Piyush Bhushan)",
-        "percent": 75.00,
-        "present": 15,
-        "total": 20
+        "name": "BCS-503 (Shubhangi Sankhyadhar)",
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
       },
       {
         "name": "BCS-551 (Sweta Sri)",
-        "percent": 83.33,
-        "present": 10,
-        "total": 12
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
+      },
+      {
+        "name": "BCS-552 (Ashish Tripathi)",
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
+      },
+      {
+        "name": "BCS-553 (Shubhangi Sankhyadhar)",
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
+      },
+      {
+        "name": "BCS-554 (Ashish Tripathi)",
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
+      },
+      {
+        "name": "BCS-554 (Sweta Sri)",
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
+      },
+      {
+        "name": "BIT-052 (Vatsya Tiwari)",
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
+      },
+      {
+        "name": "TR-OLT-501 (Sweta Sri)",
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
+      },
+      {
+        "name": "TT-DBMS-501 (Esha Tripathi)",
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
+      },
+      {
+        "name": "TT-FSD-501 (Syed Ali Hussain Rizvi)",
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
+      },
+      {
+        "name": "TT-GENAI-5 (Sumit Kumar)",
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
+      },
+      {
+        "name": "TT-H-5 (Shikha Verma)",
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
+      },
+      {
+        "name": "TT-H-5 (Sweta Sri)",
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
+      },
+      {
+        "name": "TT-HD-5 (Satyam Kumar)",
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
+      },
+      {
+        "name": "TT-HT-5 (Satyam Kumar)",
+        "percent": 100.0,
+        "present": 2,
+        "total": 2
       }
     ]
   },
@@ -222,20 +294,7 @@
     ],
     "Saturday": []
   },
-  "today_classes": [
-    {
-      "time": "1st09.25-10.15",
-      "subject": "[ Ashish Tripathi ][ BCS-502 ][ L-23 ][ G ]"
-    },
-    {
-      "time": "2nd10.15-11.05",
-      "subject": "[ Esha Tripathi ][ BCS-501 ][ L-23 ][ G ]"
-    },
-    {
-      "time": "3rd11.15-12.05",
-      "subject": "[ Syed Ali Hussain Rizvi ][ TT-FSD-501 ][ J-14 ][ G ]"
-    }
-  ],
+  "today_classes": [],
   "absentToday": [],
   "relocations": []
 }

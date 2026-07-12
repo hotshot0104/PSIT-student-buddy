@@ -85,13 +85,20 @@ async def _get_cached_data_or_scrape() -> dict:
             return data
     return {}
 
+def _clean_subject_str(subject_str: str) -> str:
+    """Format '[ Name ][ Code ][ Room ][ G ]' to 'Name  Code  Room  G'."""
+    if not subject_str:
+        return ""
+    return subject_str.replace("][", "  ").replace("[", "").replace("]", "").strip()
+
 
 def _timetable_text(day_name, classes, offset: int):
     """Format a timetable response and build navigation inline keyboard."""
     if isinstance(classes, list) and classes:
         lines = []
         for c in classes:
-            lines.append(f"🕐 {c.get('time') or c.get('time_label')} — {c.get('subject')}")
+            sub_cleaned = _clean_subject_str(c.get('subject'))
+            lines.append(f"🕐 {c.get('time') or c.get('time_label')} — {sub_cleaned}")
         text  = f"📅 *Classes for {day_name}:*\n\n" + "\n".join(lines)
     elif isinstance(classes, list):
         text = f"🎉 No classes on *{day_name}*! Free day!"
@@ -106,7 +113,7 @@ def _timetable_text(day_name, classes, offset: int):
 
 
 def _attendance_text(attendance) -> str:
-    """Format the attendance response (overall + subject-wise if available)."""
+    """Format the attendance response (overall only, avoiding subject breakdown)."""
     if not isinstance(attendance, dict):
         return str(attendance)
 
@@ -114,17 +121,6 @@ def _attendance_text(attendance) -> str:
     text  = f"📊 *Overall Attendance:* {emoji} *{attendance['percent']}*"
     if attendance.get("present") is not None and attendance.get("total") is not None:
         text += f"\n({attendance['present']}/{attendance['total']} classes attended)"
-
-    subjects = attendance.get("subjects", [])
-    if subjects:
-        text += "\n\n*📚 Subject-wise Breakdown:*"
-        for s in subjects:
-            se    = erp.attendance_emoji(s.get("percent", 0))
-            name  = (s.get("name") or "Unknown")[:28]
-            pct   = s.get("percent", 0.0)
-            pres  = s.get("present", "?")
-            tot   = s.get("total",   "?")
-            text += f"\n{se} {name}: *{pct:.1f}%* ({pres}/{tot})"
     return text
 
 
@@ -258,7 +254,7 @@ async def cmd_week(update: Update, context: ContextTypes.DEFAULT_TYPE):
         classes = week.get(day_name, [])
         marker = "📍 " if i == today_idx else ""
         if classes:
-            lines = "\n".join(f"  • {c['time']} — {c['subject']}" for c in classes)
+            lines = "\n".join(f"  • {c['time']} — {_clean_subject_str(c['subject'])}" for c in classes)
             parts.append(f"{marker}*{day_name}*\n{lines}")
         else:
             parts.append(f"{marker}*{day_name}* — 🎉 No classes")
@@ -453,7 +449,7 @@ async def job_morning_briefing(context: ContextTypes.DEFAULT_TYPE):
 
         # 1. Timetable Section
         if classes:
-            lines = "\n".join(f"🕐 {c['time']} — {c['subject']}" for c in classes)
+            lines = "\n".join(f"🕐 {c['time']} — {_clean_subject_str(c['subject'])}" for c in classes)
             tt_section = f"📅 *Classes for {day_name}:*\n{lines}"
         else:
             tt_section = f"🎉 *No classes today ({day_name})! Free day!*"
@@ -470,10 +466,12 @@ async def job_morning_briefing(context: ContextTypes.DEFAULT_TYPE):
         if relocations:
             swap_section = "\n\n⚠️ *Timetable Changes/Relocations Detected:*\n"
             for r in relocations:
+                orig_clean = _clean_subject_str(r['original'])
+                new_clean = _clean_subject_str(r['new'])
                 if r["type"] == "swap":
-                    swap_section += f"• *{r['time']}*: {r['original']} ➔ *{r['new']}*\n"
+                    swap_section += f"• *{r['time']}*: {orig_clean} ➔ *{new_clean}*\n"
                 else:
-                    swap_section += f"• *{r['time']}*: Added *{r['new']}*\n"
+                    swap_section += f"• *{r['time']}*: Added *{new_clean}*\n"
 
         msg = (
             f"☀️ *Good morning, {erp.ERP_USER}!* (Cache updated)\n\n"
@@ -530,17 +528,18 @@ async def job_class_reminder(context: ContextTypes.DEFAULT_TYPE):
             minutes_until = (start_time - now).total_seconds() / 60
             if 0 <= minutes_until <= 15:
                 try:
+                    sub_cleaned = _clean_subject_str(cls['subject'])
                     await context.bot.send_message(
                         chat_id=TELEGRAM_USER_ID,
                         text=(
                             f"🔔 *Class in ~15 minutes!*\n"
-                            f"📚 *{cls['subject']}* at *{time_str}*\n"
+                            f"📚 *{sub_cleaned}* at *{time_str}*\n"
                             f"_Get ready! 🏃_"
                         ),
                         parse_mode="Markdown",
                     )
                     _reminders_sent.add(key)
-                    log_msg = f"[{now.strftime('%H:%M')}] ✅ Sent: {cls['subject']}"
+                    log_msg = f"[{now.strftime('%H:%M')}] ✅ Sent: {sub_cleaned}"
                     _reminder_logs.append(log_msg)
                     print(log_msg)
                 except Exception as e:
@@ -574,7 +573,7 @@ async def job_absent_warning(context: ContextTypes.DEFAULT_TYPE):
         # Strategy 1: Check daily record absence
         absent_subjects = data.get("absentToday", [])
         if absent_subjects:
-            lines = "\n".join(f"❌ *{sub}*" for sub in absent_subjects)
+            lines = "\n".join(f"❌ *{_clean_subject_str(sub)}*" for sub in absent_subjects)
             msg = (
                 f"⚠️ *Absent Alert!*\n\n"
                 f"You were marked *absent* in:\n\n{lines}\n\n"
