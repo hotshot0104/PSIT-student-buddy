@@ -2,3 +2,5 @@ requests
 beautifulsoup4
 python-telegram-bot[job-queue]
 python-dotenv
+flask
+flask-cors

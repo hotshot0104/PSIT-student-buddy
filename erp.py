@@ -97,16 +97,20 @@ def erp_login():
         logged_in = False
 
     if logged_in:
-        print(f"✅ ERP login succeeded → {login_resp.url}")
+        print(f"SUCCESS: ERP login succeeded -> {login_resp.url}")
         return session, None
 
-    print(f"❌ Login failed. Final URL: {login_resp.url}")
-    return None, "❌ Login failed. Check ERP_USER and ERP_PASSWORD in your .env file."
+    print(f"ERROR: Login failed. Final URL: {login_resp.url}")
+    return None, "Login failed. Check ERP_USER and ERP_PASSWORD in your .env file."
 
 
 def get_session():
     """Return a valid ERP session, re-validating at most once every 30 minutes."""
     global _cached_session, _session_last_check
+
+    # --- MOCK MODE INTERCEPT ---
+    if os.getenv("MOCK_MODE", "False").lower() == "true":
+        return "mock_session", None
 
     now = datetime.now(tz=IST)
 
@@ -169,6 +173,36 @@ def parse_time(time_str):
 
 def get_classes_for_day(session, day_offset=0):
     """Fetch timetable and return classes for the given day offset (0=today, 1=tomorrow, etc.)."""
+    # --- MOCK MODE INTERCEPT ---
+    if os.getenv("MOCK_MODE", "False").lower() == "true":
+        target_idx = (datetime.now(tz=IST).weekday() + day_offset) % 7
+        day_name = DAY_NAMES[target_idx]
+        if day_name == "Sunday":
+            return day_name, []
+            
+        now_dt = datetime.now(tz=IST)
+        # Schedule the next mock class exactly 10 minutes in the future so the 15-min reminder triggers!
+        reminder_test_time = now_dt + timedelta(minutes=10)
+        time_label = reminder_test_time.strftime("%I:%M %p")
+        
+        return day_name, [
+            {
+                "time_label": time_label,
+                "subject": "Data Structures & Algorithms (Mock)",
+                "start_time": reminder_test_time.replace(second=0, microsecond=0)
+            },
+            {
+                "time_label": (reminder_test_time + timedelta(hours=1)).strftime("%I:%M %p"),
+                "subject": "Computer Networks (Mock)",
+                "start_time": (reminder_test_time + timedelta(hours=1)).replace(second=0, microsecond=0)
+            },
+            {
+                "time_label": (reminder_test_time + timedelta(hours=2)).strftime("%I:%M %p"),
+                "subject": "Operating Systems (Mock)",
+                "start_time": (reminder_test_time + timedelta(hours=2)).replace(second=0, microsecond=0)
+            }
+        ]
+
     try:
         tt_resp = session.get(TT_URL, timeout=15)
         tt_resp.raise_for_status()
@@ -273,6 +307,22 @@ def get_attendance(session):
     Fetch overall attendance and subject-wise breakdown.
     Returns a dict or an error string.
     """
+    # --- MOCK MODE INTERCEPT ---
+    if os.getenv("MOCK_MODE", "False").lower() == "true":
+        return {
+            "present": 75,
+            "total": 105,
+            "percent": "71.43%",
+            "percent_val": 71.43,
+            "subjects": [
+                { "subject": "Data Structures & Algorithms (Mock)", "percent": "85.7%", "present": "18", "total": "21" },
+                { "subject": "Computer Networks (Mock)",            "percent": "76.2%", "present": "16", "total": "21" },
+                { "subject": "Operating Systems (Mock)",            "percent": "61.9%", "present": "13", "total": "21" },
+                { "subject": "Database Management System (Mock)",   "percent": "80.0%", "present": "20", "total": "25" },
+                { "subject": "Software Engineering (Mock)",         "percent": "50.0%", "present": "8",  "total": "16" }
+            ]
+        }
+
     try:
         resp = session.get(ATTENDANCE_URL, timeout=15)
         resp.raise_for_status()
@@ -371,6 +421,14 @@ def get_daily_attendance(session):
     Returns a list of dicts: [{"subject": ..., "status": "Present"/"Absent", "time": ...}]
     or None if the ERP does not expose this data.
     """
+    # --- MOCK MODE INTERCEPT ---
+    if os.getenv("MOCK_MODE", "False").lower() == "true":
+        return [
+            {"subject": "Data Structures & Algorithms (Mock)", "status": "Present", "time": "09:25 AM"},
+            {"subject": "Computer Networks (Mock)",            "status": "Present", "time": "10:25 AM"},
+            {"subject": "Operating Systems (Mock)",            "status": "Absent",  "time": "01:25 PM"}
+        ]
+
     candidate_urls = [
         f"{BASE_URL}/Student/MyDailyAttendance",
         f"{BASE_URL}/Student/MyAttendance",

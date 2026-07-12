@@ -4,7 +4,12 @@ Full-featured Telegram bot replacing the Discord bot.
 """
 import asyncio
 import os
+import sys
 from datetime import datetime, timezone, timedelta, time as dt_time
+
+# Force UTF-8 output so emoji in log messages work on Windows
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
 
 from telegram import (
     Update,
@@ -72,7 +77,7 @@ def _timetable_text(day_name, classes, offset: int):
         lines = "\n".join(erp.format_classes(classes))
         text  = f"📅 *Classes for {day_name}:*\n\n{lines}"
     elif isinstance(classes, list):
-        text = f"🎉 No classes on *{day_name}*\\! Free day\\!"
+        text = f"🎉 No classes on *{day_name}*! Free day!"
     else:
         text = str(classes)
 
@@ -95,14 +100,14 @@ def _attendance_text(attendance) -> str:
 
     subjects = attendance.get("subjects", [])
     if subjects:
-        text += "\n\n*📚 Subject\\-wise Breakdown:*"
+        text += "\n\n*📚 Subject-wise Breakdown:*"
         for s in subjects:
             se    = erp.attendance_emoji(s.get("percent", "0"))
             name  = (s.get("subject") or "Unknown")[:28]
             pct   = s.get("percent",  "N/A")
             pres  = s.get("present",  "?")
             tot   = s.get("total",    "?")
-            text += f"\n{se} {name}: *{pct}* \\({pres}/{tot}\\)"
+            text += f"\n{se} {name}: *{pct}* ({pres}/{tot})"
     return text
 
 
@@ -110,7 +115,7 @@ def _bunk_text(attendance) -> str:
     """Format the bunk budget response."""
     budget = erp.calc_bunk_budget(attendance)
     if budget is None:
-        return "⚠️ Couldn't calculate bunk budget \\(missing present/total data\\)\\."
+        return "⚠️ Couldn't calculate bunk budget (missing present/total data)."
 
     emoji = erp.attendance_emoji(attendance.get("percent_val", 0))
     pct   = attendance.get("percent", "?")
@@ -119,15 +124,15 @@ def _bunk_text(attendance) -> str:
     if budget["can_bunk"] > 0:
         return (
             f"📊 *Bunk Budget*\n"
-            f"Current: {emoji} {pct} \\({p}/{t}\\)\n\n"
-            f"✅ You can skip *{budget['can_bunk']} more class\\(es\\)* "
-            f"and still stay above 75%\\."
+            f"Current: {emoji} {pct} ({p}/{t})\n\n"
+            f"✅ You can skip *{budget['can_bunk']} more class(es)* "
+            f"and still stay above 75%."
         )
     return (
         f"📊 *Bunk Budget*\n"
-        f"Current: {emoji} {pct} \\({p}/{t}\\)\n\n"
-        f"🚨 You *cannot bunk any more classes\\!*\n"
-        f"Attend *{budget['need_attend']} consecutive class\\(es\\)* to get back to 75%\\."
+        f"Current: {emoji} {pct} ({p}/{t})\n\n"
+        f"🚨 You *cannot bunk any more classes!*\n"
+        f"Attend *{budget['need_attend']} consecutive class(es)* to get back to 75%."
     )
 
 
@@ -139,14 +144,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authorized(update):
         return
     await update.message.reply_text(
-        "👋 *Welcome to PSIT Student Buddy\\!*\n\n"
-        "I'm your personal academic assistant\\. I keep you on track with:\n"
-        "• 📅 Daily timetable \\& attendance briefing at *7 AM*\n"
+        "👋 *Welcome to PSIT Student Buddy!*\n\n"
+        "I'm your personal academic assistant. I keep you on track with:\n"
+        "• 📅 Daily timetable & attendance briefing at *7 AM*\n"
         "• 🔔 Class reminders *15 minutes* before each lecture\n"
         "• ⚠️ Absent alert at *8 PM* if you missed a class\n"
         "• 📉 Bunk budget calculator\n\n"
-        "Use the menu below to get started\\! 🎓",
-        parse_mode="MarkdownV2",
+        "Use the menu below to get started! 🎓",
+        parse_mode="Markdown",
         reply_markup=MAIN_KEYBOARD,
     )
 
@@ -177,7 +182,7 @@ async def cmd_today(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     day_name, classes = await asyncio.to_thread(erp.get_today_classes, session)
     text, kb = _timetable_text(day_name, classes, 0)
-    await msg.edit_text(text, parse_mode="MarkdownV2", reply_markup=kb)
+    await msg.edit_text(text, parse_mode="Markdown", reply_markup=kb)
 
 
 async def cmd_tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -188,7 +193,7 @@ async def cmd_tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     day_name, classes = await asyncio.to_thread(erp.get_classes_for_day, session, 1)
     text, kb = _timetable_text(day_name, classes, 1)
-    await msg.edit_text(text, parse_mode="MarkdownV2", reply_markup=kb)
+    await msg.edit_text(text, parse_mode="Markdown", reply_markup=kb)
 
 
 async def cmd_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -202,7 +207,7 @@ async def cmd_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE):
     kb         = InlineKeyboardMarkup([[
         InlineKeyboardButton("📉 View Bunk Budget", callback_data="bunk")
     ]])
-    await msg.edit_text(text, parse_mode="MarkdownV2", reply_markup=kb)
+    await msg.edit_text(text, parse_mode="Markdown", reply_markup=kb)
 
 
 async def cmd_bunk(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -212,7 +217,7 @@ async def cmd_bunk(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await msg.edit_text(err)
         return
     attendance = await asyncio.to_thread(erp.get_attendance, session)
-    await msg.edit_text(_bunk_text(attendance), parse_mode="MarkdownV2")
+    await msg.edit_text(_bunk_text(attendance), parse_mode="Markdown")
 
 
 async def cmd_week(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -235,7 +240,7 @@ async def cmd_week(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     reply = "\n\n".join(parts)
     if len(reply) > 4000:
-        reply = reply[:4000] + "\n\n_\\.\\.\\.truncated_"
+        reply = reply[:4000] + "\n\n_...truncated_"
     await msg.edit_text(reply, parse_mode="Markdown")
 
 
@@ -261,8 +266,8 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "❓ *PSIT Student Buddy — Help*\n\n"
         "*📅 Today* — Today's class schedule\n"
         "*📆 Tomorrow* — Tomorrow's classes\n"
-        "*📊 Attendance* — Overall \\+ subject\\-wise attendance\n"
-        "*📉 Bunk Budget* — Classes you can skip \\/ need to attend\n"
+        "*📊 Attendance* — Overall & subject-wise attendance\n"
+        "*📉 Bunk Budget* — Classes you can skip / need to attend\n"
         "*🗓️ This Week* — Full weekly timetable\n"
         "*⚙️ Settings* — View current bot configuration\n"
         "*📜 Logs* — Today's reminder activity log\n\n"
@@ -271,14 +276,14 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• Reminders *15 min* before each class starts\n"
         "• Absent alert at *8 PM* if you missed a lecture"
     )
-    await update.message.reply_text(reply, parse_mode="MarkdownV2")
+    await update.message.reply_text(reply, parse_mode="Markdown")
 
 
 async def cmd_logs(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not is_authorized(update):
         return
     if not _reminder_logs:
-        await update.message.reply_text("📭 No reminder logs for today yet\\.", parse_mode="MarkdownV2")
+        await update.message.reply_text("📭 No reminder logs for today yet.", parse_mode="Markdown")
     else:
         logs_text = "\n".join(_reminder_logs[-15:])
         await update.message.reply_text(
@@ -303,7 +308,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
         day_name, classes = await asyncio.to_thread(erp.get_classes_for_day, session, offset)
         text, kb = _timetable_text(day_name, classes, offset)
-        await query.edit_message_text(text, parse_mode="MarkdownV2", reply_markup=kb)
+        await query.edit_message_text(text, parse_mode="Markdown", reply_markup=kb)
 
     elif query.data == "bunk":
         session, err = await asyncio.to_thread(erp.get_session)
@@ -311,7 +316,7 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.edit_message_text(err)
             return
         attendance = await asyncio.to_thread(erp.get_attendance, session)
-        await query.edit_message_text(_bunk_text(attendance), parse_mode="MarkdownV2")
+        await query.edit_message_text(_bunk_text(attendance), parse_mode="Markdown")
 
 
 # ─────────────────────────────────────────
@@ -403,11 +408,11 @@ async def job_class_reminder(context: ContextTypes.DEFAULT_TYPE):
                     await context.bot.send_message(
                         chat_id=TELEGRAM_USER_ID,
                         text=(
-                            f"🔔 *Class in ~15 minutes\\!*\n"
+                            f"🔔 *Class in ~15 minutes!*\n"
                             f"📚 *{cls['subject']}* at *{cls['time_label']}*\n"
-                            f"_Get ready\\! 🏃_"
+                            f"_Get ready! 🏃_"
                         ),
-                        parse_mode="MarkdownV2",
+                        parse_mode="Markdown",
                     )
                     _reminders_sent.add(key)
                     log_msg = f"[{now.strftime('%H:%M')}] ✅ Sent: {cls['subject']}"
@@ -423,10 +428,6 @@ async def job_class_reminder(context: ContextTypes.DEFAULT_TYPE):
 async def job_absent_warning(context: ContextTypes.DEFAULT_TYPE):
     """
     8:00 PM IST — Check if the student was marked absent in any class today.
-
-    Strategy 1: Fetch per-lecture daily attendance from ERP (if the page exists).
-    Strategy 2 (fallback): Compare current attendance % to the 7 AM snapshot.
-                           A drop > 0.5% suggests at least one absence.
     """
     global _morning_attendance_pct
     try:
@@ -442,28 +443,27 @@ async def job_absent_warning(context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        # ── Strategy 1: Per-lecture attendance ───────────────────────────────
         daily_records = await asyncio.to_thread(erp.get_daily_attendance, session)
         if daily_records is not None:
             absent = [r for r in daily_records if "absent" in r.get("status", "").lower()]
             if absent:
                 lines = "\n".join(
-                    f"❌ *{r['subject']}*" + (f" \\({r['time']}\\)" if r.get("time") else "")
+                    f"❌ *{r['subject']}*" + (f" ({r['time']})" if r.get("time") else "")
                     for r in absent
                 )
                 msg = (
-                    f"⚠️ *Absent Alert\\!*\n\n"
+                    f"⚠️ *Absent Alert!*\n\n"
                     f"You were marked *absent* in:\n\n{lines}\n\n"
-                    f"_Contact your faculty if this was a mistake\\._"
+                    f"_Contact your faculty if this was a mistake._"
                 )
             else:
-                msg = "✅ *Great job\\!* You attended all classes today\\! 🎉"
+                msg = "✅ *Great job!* You attended all classes today! 🎉"
             await context.bot.send_message(
-                chat_id=TELEGRAM_USER_ID, text=msg, parse_mode="MarkdownV2"
+                chat_id=TELEGRAM_USER_ID, text=msg, parse_mode="Markdown"
             )
             return
 
-        # ── Strategy 2: Attendance % drop fallback ───────────────────────────
+        # Fallback to overall % check
         current = await asyncio.to_thread(erp.get_attendance, session)
         if not isinstance(current, dict):
             return
@@ -475,30 +475,29 @@ async def job_absent_warning(context: ContextTypes.DEFAULT_TYPE):
             if drop > 0.5:
                 emoji = erp.attendance_emoji(curr_pct)
                 msg = (
-                    f"⚠️ *Attendance Drop Detected\\!*\n\n"
-                    f"Morning: *{_morning_attendance_pct:.2f}%* → Now: *{curr_pct:.2f}%*\n"
+                    f"⚠️ *Attendance Drop Detected!*\n\n"
+                    f"Morning: *{_morning_attendance_pct:.2f}%* -> Now: *{curr_pct:.2f}%*\n"
                     f"Current: {emoji} *{current['percent']}* "
-                    f"\\({current['present']}/{current['total']}\\)\n\n"
-                    f"_It looks like you may have missed a class today\\._"
+                    f"({current['present']}/{current['total']})\n\n"
+                    f"_It looks like you may have missed a class today._"
                 )
             else:
                 emoji = erp.attendance_emoji(curr_pct)
                 msg = (
-                    f"✅ *All good\\!* No attendance drop today\\!\n"
+                    f"✅ *All good!* No attendance drop today!\n"
                     f"Current: {emoji} *{current['percent']}* "
-                    f"\\({current['present']}/{current['total']}\\)"
+                    f"({current['present']}/{current['total']})"
                 )
         else:
-            # No morning snapshot — just report current attendance
             emoji = erp.attendance_emoji(curr_pct)
             msg = (
                 f"📊 *Evening Attendance Summary*\n"
                 f"Current: {emoji} *{current['percent']}* "
-                f"\\({current['present']}/{current['total']}\\)"
+                f"({current['present']}/{current['total']})"
             )
 
         await context.bot.send_message(
-            chat_id=TELEGRAM_USER_ID, text=msg, parse_mode="MarkdownV2"
+            chat_id=TELEGRAM_USER_ID, text=msg, parse_mode="Markdown"
         )
     except Exception as e:
         print(f"[Absent Warning Error] {e}")
@@ -517,35 +516,32 @@ def main():
         return
 
     print("--- STARTUP ---")
-    print(f"ERP_USER:     {'✅' if erp.ERP_USER     else '❌ NOT SET'}")
-    print(f"ERP_PASSWORD: {'✅' if erp.ERP_PASSWORD else '❌ NOT SET'}")
-    print(f"BOT_TOKEN:    ✅ (length: {len(TELEGRAM_BOT_TOKEN)})")
+    print(f"ERP_USER:     {'OK' if erp.ERP_USER     else 'NOT SET'}")
+    print(f"ERP_PASSWORD: {'OK' if erp.ERP_PASSWORD else 'NOT SET'}")
+    print(f"BOT_TOKEN:    OK (length: {len(TELEGRAM_BOT_TOKEN)})")
     print(f"USER_ID:      {TELEGRAM_USER_ID}")
     print("---------------")
 
     app = Application.builder().token(TELEGRAM_BOT_TOKEN).build()
 
-    # ── Message / Command handlers ────────────────────────────────────────────
+    # Handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("logs",  cmd_logs))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_handler(CallbackQueryHandler(callback_handler))
 
-    # ── Scheduled jobs ────────────────────────────────────────────────────────
-    # 7:00 AM IST  = 01:30 UTC
+    # Jobs
     app.job_queue.run_daily(
         job_morning_briefing,
         time=dt_time(1, 30, tzinfo=timezone.utc),
     )
-    # 8:00 PM IST  = 14:30 UTC
     app.job_queue.run_daily(
         job_absent_warning,
         time=dt_time(14, 30, tzinfo=timezone.utc),
     )
-    # Class reminders — check every minute
     app.job_queue.run_repeating(job_class_reminder, interval=60, first=10)
 
-    print("✅ Bot started. Listening for messages...")
+    print("Bot started. Listening for messages...")
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 

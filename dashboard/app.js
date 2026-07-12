@@ -1,14 +1,14 @@
 // ================================================================
 // PSIT Student Buddy — Dashboard Logic
-// Simulated demo data (bot backend provides live data in production)
+// Dynamic logic fetching from local Python backend API
 // ================================================================
 
-// ── Mock Data (mirrors what the Python bot fetches from ERP) ────
+// ── Mock Data Fallback ──────────────────────────────────────────
 const MOCK = {
-  student: { name: "Sameer", roll: "2200270130035", branch: "CSE, Sem 5" },
-
+  student: { name: "Sameer (Mock)", roll: "2200270130035", branch: "CSE, Sem 5" },
   attendance: {
     overall: 78.5,
+    percent: "78.50%",
     present: 94,
     total: 120,
     subjects: [
@@ -20,7 +20,6 @@ const MOCK = {
       { name: "Machine Learning",             percent: 83.3, present: 10, total: 12 },
     ],
   },
-
   timetable: {
     Monday:    [
       { time: "09:25 AM", subject: "Data Structures" },
@@ -49,10 +48,17 @@ const MOCK = {
     ],
     Saturday:  [],
   },
-
-  // Simulate an absent warning for demo
+  today_classes: [
+    { time: "09:25 AM", subject: "Data Structures" },
+    { time: "10:25 AM", subject: "Computer Networks" },
+    { time: "01:25 PM", subject: "Operating Systems" }
+  ],
   absentToday: ["Operating Systems"],
 };
+
+// ── Active Data Holder ──────────────────────────────────────────
+let DATA = MOCK;
+let isLive = false;
 
 // ── Helpers ──────────────────────────────────────────────────────
 const IST_OFFSET = 5.5 * 60 * 60 * 1000; // ms
@@ -62,7 +68,6 @@ function nowIST() {
 }
 
 function parseClassTime(timeStr) {
-  // e.g. "09:25 AM"
   const [timePart, ampm] = timeStr.split(" ");
   let [h, m] = timePart.split(":").map(Number);
   if (ampm === "PM" && h < 12) h += 12;
@@ -94,8 +99,9 @@ function updateClock() {
   const h12 = h % 12 || 12;
   const day = DAY_NAMES[now.getDay()];
   const date = now.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
-  document.getElementById("clock").textContent =
-    `${day}, ${date} · ${pad(h12)}:${pad(m)}:${pad(s)} ${ampm} IST`;
+  document.querySelectorAll(".live-clock").forEach(el => {
+    el.textContent = `${day}, ${date} · ${pad(h12)}:${pad(m)}:${pad(s)} ${ampm} IST`;
+  });
 }
 setInterval(updateClock, 1000);
 updateClock();
@@ -104,8 +110,13 @@ updateClock();
 function showPage(id) {
   document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
-  document.getElementById("page-" + id).classList.add("active");
-  document.querySelector(`[data-page="${id}"]`).classList.add("active");
+  
+  const targetPage = document.getElementById("page-" + id);
+  if (targetPage) targetPage.classList.add("active");
+  
+  const targetNav = document.querySelector(`[data-page="${id}"]`);
+  if (targetNav) targetNav.classList.add("active");
+  
   if (id === "dashboard") renderDashboard();
   if (id === "timetable") renderTimetable();
   if (id === "attendance") renderAttendance();
@@ -126,15 +137,15 @@ function buildGauge(pct) {
   document.getElementById("gauge-pct").className = "gauge-pct color-" + attendanceColor(pct);
 
   const fill = document.getElementById("gauge-fill");
-  fill.setAttribute("stroke-dasharray", `${dash} ${circ}`);
-  fill.setAttribute("stroke", color);
-  fill.style.filter = `drop-shadow(0 0 8px ${color})`;
-
-  // Animate
-  fill.style.transition = "stroke-dasharray 1.5s cubic-bezier(0.4,0,0.2,1)";
+  if (fill) {
+    fill.setAttribute("stroke-dasharray", `${dash} ${circ}`);
+    fill.setAttribute("stroke", color);
+    fill.style.filter = `drop-shadow(0 0 8px ${color})`;
+    fill.style.transition = "stroke-dasharray 1.5s cubic-bezier(0.4,0,0.2,1)";
+  }
 }
 
-// ── Bunk Budget ──────────────────────────────────────────────────
+// ── Bunk Budget Calculator ───────────────────────────────────────
 function calcBunkBudget(present, total) {
   const canBunk    = Math.max(0, Math.floor((present / 0.75) - total));
   const needAttend = present / total < 0.75
@@ -146,6 +157,7 @@ function calcBunkBudget(present, total) {
 // ── Today's Timeline ─────────────────────────────────────────────
 function buildTimeline(classes) {
   const wrap = document.getElementById("today-timeline");
+  if (!wrap) return;
   wrap.innerHTML = "";
 
   const now = nowIST();
@@ -187,16 +199,14 @@ function buildTimeline(classes) {
 
 // ── Dashboard Render ─────────────────────────────────────────────
 function renderDashboard() {
-  const { attendance, absentToday } = MOCK;
-  const dayName = DAY_NAMES[nowIST().getDay()];
-  const todayClasses = MOCK.timetable[dayName] || [];
+  const { attendance, absentToday, today_classes } = DATA;
 
   // Greeting
   const h = nowIST().getHours();
   const greeting = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening";
-  document.getElementById("greeting").textContent = `${greeting}, ${MOCK.student.name}! 👋`;
+  document.getElementById("greeting").textContent = `${greeting}, ${DATA.student.name}! 👋`;
   document.getElementById("student-info").textContent =
-    `${MOCK.student.roll} · ${MOCK.student.branch}`;
+    `${DATA.student.roll} · ${DATA.student.branch} ${isLive ? '🟢 Live' : '🟠 Mock Data'}`;
 
   // Absent banner
   const banner = document.getElementById("absent-banner");
@@ -231,19 +241,20 @@ function renderDashboard() {
   }
 
   // Timeline
-  buildTimeline(todayClasses);
+  buildTimeline(today_classes);
 }
 
 // ── Timetable Render ─────────────────────────────────────────────
 function renderTimetable() {
   const grid = document.getElementById("week-grid");
+  if (!grid) return;
   grid.innerHTML = "";
 
   const todayName = DAY_NAMES[nowIST().getDay()];
   const days = ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
   days.forEach(day => {
-    const classes    = MOCK.timetable[day] || [];
+    const classes    = DATA.timetable[day] || [];
     const isToday    = day === todayName;
     const col        = document.createElement("div");
     col.className    = `day-col${isToday ? " today" : ""}`;
@@ -267,9 +278,12 @@ function renderTimetable() {
 // ── Attendance Detail Render ──────────────────────────────────────
 function renderAttendance() {
   const grid = document.getElementById("attendance-grid");
+  if (!grid) return;
   grid.innerHTML = "";
 
-  MOCK.attendance.subjects.forEach(s => {
+  document.getElementById("att-overall-pct").textContent = DATA.attendance.percent;
+
+  DATA.attendance.subjects.forEach(s => {
     const pct   = s.percent;
     const color = attendanceColor(pct);
     const emoji = attendanceEmoji(pct);
@@ -289,7 +303,6 @@ function renderAttendance() {
     grid.appendChild(card);
   });
 
-  // Animate bars after a tick
   requestAnimationFrame(() => {
     document.querySelectorAll(".progress-fill[data-target]").forEach(el => {
       el.style.width = el.dataset.target + "%";
@@ -298,29 +311,93 @@ function renderAttendance() {
 }
 
 // ── Settings Save ─────────────────────────────────────────────────
-document.getElementById("settings-form").addEventListener("submit", function(e) {
+document.getElementById("settings-form").addEventListener("submit", async function(e) {
   e.preventDefault();
+  const btn = document.getElementById("save-btn");
+  btn.textContent = "⏳ Saving...";
+  btn.disabled = true;
+
   const erpUser   = document.getElementById("inp-erp-user").value.trim();
   const erpPass   = document.getElementById("inp-erp-pass").value.trim();
   const tgId      = document.getElementById("inp-tg-id").value.trim();
+  const tgToken   = document.getElementById("inp-tg-token").value.trim();
   const remindMin = document.getElementById("inp-remind").value.trim();
 
+  // Save to localStorage
   if (erpUser)   localStorage.setItem("erp_user",    erpUser);
   if (erpPass)   localStorage.setItem("erp_pass",    erpPass);
   if (tgId)      localStorage.setItem("telegram_id", tgId);
+  if (tgToken)   localStorage.setItem("telegram_token", tgToken);
   if (remindMin) localStorage.setItem("remind_min",  remindMin);
 
-  const btn = document.getElementById("save-btn");
-  btn.textContent = "✅ Saved!";
-  setTimeout(() => { btn.textContent = "Save Settings"; }, 2000);
+  try {
+    const response = await fetch("http://127.0.0.1:5000/api/settings", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        erp_user: erpUser,
+        erp_pass: erpPass,
+        telegram_id: tgId,
+        telegram_token: tgToken
+      })
+    });
+
+    if (response.ok) {
+      btn.textContent = "✅ Saved & Applied!";
+      // Reload page data to reflect the new credentials immediately
+      setTimeout(() => {
+        fetchLiveData();
+      }, 1000);
+    } else {
+      btn.textContent = "❌ Server Error";
+    }
+  } catch (err) {
+    console.error("Failed to connect to local server settings API:", err);
+    btn.textContent = "✅ Saved Locally Only";
+  } finally {
+    btn.disabled = false;
+    setTimeout(() => { btn.textContent = "Save Settings"; }, 3000);
+  }
 });
 
 // Restore saved settings on load
-["erp_user","telegram_id","remind_min"].forEach(key => {
+["erp_user", "erp_pass", "telegram_id", "telegram_token", "remind_min"].forEach(key => {
   const val = localStorage.getItem(key);
   const el  = document.getElementById("inp-" + key.replace("_","-"));
   if (val && el) el.value = val;
 });
 
+// ── Fetch Live Data from Backend ──────────────────────────────────
+async function fetchLiveData() {
+  const statusEl = document.querySelector(".bot-status");
+  try {
+    // Attempt to hit the local Python API endpoint
+    const response = await fetch("http://127.0.0.1:5000/api/data");
+    if (!response.ok) throw new Error("API response error");
+    
+    const liveData = await response.json();
+    DATA = liveData;
+    isLive = true;
+    
+    if (statusEl) {
+      statusEl.innerHTML = '<div class="status-dot"></div> Live ERP Connected';
+      statusEl.querySelector('.status-dot').style.background = 'var(--success)';
+    }
+  } catch (err) {
+    console.warn("⚠️ Local backend server is not running. Displaying Mock Data instead.", err);
+    DATA = MOCK;
+    isLive = false;
+    
+    if (statusEl) {
+      statusEl.innerHTML = '<div class="status-dot" style="background: var(--warning); box-shadow: 0 0 8px var(--warning)"></div> Mock Mode (Server Offline)';
+    }
+  } finally {
+    // Boot the dashboard view
+    showPage("dashboard");
+  }
+}
+
 // ── Boot ──────────────────────────────────────────────────────────
-showPage("dashboard");
+fetchLiveData();
