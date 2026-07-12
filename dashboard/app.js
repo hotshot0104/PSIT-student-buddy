@@ -88,6 +88,16 @@ function attendanceEmoji(pct) {
   return "🚨";
 }
 
+function calcBunkBudget(present, total) {
+  if (total === 0) return { canBunk: 0, needAttend: 0 };
+  const canBunk = Math.max(0, Math.floor((present / 0.75) - total));
+  let needAttend = 0;
+  if (present / total < 0.75) {
+    needAttend = Math.max(0, Math.ceil((0.75 * total - present) / 0.25));
+  }
+  return { canBunk, needAttend };
+}
+
 const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
 
 // ── Live Clock ───────────────────────────────────────────────────

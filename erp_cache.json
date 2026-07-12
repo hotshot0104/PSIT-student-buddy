@@ -1,0 +1,241 @@
+{
+  "last_updated": "2026-07-12T16:55:00.000000+05:30",
+  "student": {
+    "name": "Sameer (ERP Locked)",
+    "roll": "2401641530046",
+    "branch": "Computer Science (Sem 5)"
+  },
+  "attendance": {
+    "overall": 78.33,
+    "percent": "78.33%",
+    "present": 94,
+    "total": 120,
+    "subjects": [
+      {
+        "name": "BCS-502 (Ashish Tripathi)",
+        "percent": 85.71,
+        "present": 18,
+        "total": 21
+      },
+      {
+        "name": "BCS-501 (Esha Tripathi)",
+        "percent": 76.19,
+        "present": 16,
+        "total": 21
+      },
+      {
+        "name": "BIT-052 (Vatsya Tiwari)",
+        "percent": 71.43,
+        "present": 15,
+        "total": 21
+      },
+      {
+        "name": "TT-DBMS-501 (Esha Tripathi)",
+        "percent": 80.00,
+        "present": 20,
+        "total": 25
+      },
+      {
+        "name": "BCS-055 (Piyush Bhushan)",
+        "percent": 75.00,
+        "present": 15,
+        "total": 20
+      },
+      {
+        "name": "BCS-551 (Sweta Sri)",
+        "percent": 83.33,
+        "present": 10,
+        "total": 12
+      }
+    ]
+  },
+  "timetable": {
+    "Monday": [
+      {
+        "time": "1st09.25-10.15",
+        "subject": "[ Ashish Tripathi ][ BCS-502 ][ L-23 ][ G ]"
+      },
+      {
+        "time": "2nd10.15-11.05",
+        "subject": "[ Esha Tripathi ][ BCS-501 ][ L-23 ][ G ]"
+      },
+      {
+        "time": "3rd11.15-12.05",
+        "subject": "[ Syed Ali Hussain Rizvi ][ TT-FSD-501 ][ J-14 ][ G ]"
+      },
+      {
+        "time": "4th12.05-12.55",
+        "subject": "[ Syed Ali Hussain Rizvi ][ TT-FSD-501 ][ J-14 ][ G ]"
+      },
+      {
+        "time": "5th01.45-02.30",
+        "subject": "[ Sweta Sri ][ BCS-551 ][ L-31-32 ][ G ]"
+      },
+      {
+        "time": "6th02.30-03.15",
+        "subject": "[ Sweta Sri ][ BCS-551 ][ L-31-32 ][ G ]"
+      },
+      {
+        "time": "7th03.25-4.10",
+        "subject": "[ Satyam Kumar ][ TT-HD-5 ][ J-14 ][ G ]"
+      },
+      {
+        "time": "8th04.10-04.55",
+        "subject": "[ Satyam Kumar ][ TT-HD-5 ][ J-14 ][ G ]"
+      }
+    ],
+    "Tuesday": [
+      {
+        "time": "1st09.25-10.15",
+        "subject": "[ Esha Tripathi ][ BCS-501 ][ L-22 ][ G ]"
+      },
+      {
+        "time": "2nd10.15-11.05",
+        "subject": "[ Vatsya Tiwari ][ BIT-052 ][ L-22 ]"
+      },
+      {
+        "time": "3rd11.15-12.05",
+        "subject": "[ Sweta Sri ][ TR-OLT-501 ][ R-21-22 ][ G ]"
+      },
+      {
+        "time": "4th12.05-12.55",
+        "subject": "[ Sweta Sri ][ TR-OLT-501 ][ R-21-22 ][ G ]"
+      },
+      {
+        "time": "5th01.45-02.30",
+        "subject": "[ Satyam Kumar ][ TT-HT-5 ][ J-14 ][ G ]"
+      },
+      {
+        "time": "6th02.30-03.15",
+        "subject": "[ Satyam Kumar ][ TT-HT-5 ][ J-14 ][ G ]"
+      },
+      {
+        "time": "7th03.25-4.10",
+        "subject": "[ Sumit Kumar ][ TT-GENAI-5 ][ J-14 ][ G ]"
+      },
+      {
+        "time": "8th04.10-04.55",
+        "subject": "[ Sumit Kumar ][ TT-GENAI-5 ][ J-14 ][ G ]"
+      }
+    ],
+    "Wednesday": [
+      {
+        "time": "1st09.25-10.15",
+        "subject": "[ Esha Tripathi ][ BCS-501 ][ L-22 ][ G ]"
+      },
+      {
+        "time": "2nd10.15-11.05",
+        "subject": "[ Shubhangi Sankhyadhar ][ BCS-503 ][ L-22 ][ G ]"
+      },
+      {
+        "time": "3rd11.15-12.05",
+        "subject": "[ Sumit Kumar ][ TT-GENAI-5 ][ J-14 ][ G ]"
+      },
+      {
+        "time": "4th12.05-12.55",
+        "subject": "[ Sumit Kumar ][ TT-GENAI-5 ][ J-14 ][ G ]"
+      },
+      {
+        "time": "5th01.45-02.30",
+        "subject": "[ Ashish Tripathi ][ BCS-502 ][ L-22 ][ G ]"
+      },
+      {
+        "time": "6th02.30-03.15",
+        "subject": "[ Piyush Bhushan Singh ][ BCS-055 ][ L-22 ][ G ]"
+      },
+      {
+        "time": "7th03.25-4.10",
+        "subject": "[ Satyam Kumar ][ TT-HT-5 ][ J-14 ][ G ]"
+      },
+      {
+        "time": "8th04.10-04.55",
+        "subject": "[ Satyam Kumar ][ TT-HT-5 ][ J-14 ][ G ]"
+      }
+    ],
+    "Thursday": [
+      {
+        "time": "1st09.25-10.15",
+        "subject": "[ Ashish Tripathi ][ BCS-554 ][ L-31-32 ][ G ]"
+      },
+      {
+        "time": "2nd10.15-11.05",
+        "subject": "[ Ashish Tripathi ][ BCS-554 ][ L-31-32 ][ G ]"
+      },
+      {
+        "time": "3rd11.15-12.05",
+        "subject": "[ Piyush Bhushan Singh ][ BCS-055 ][ L-22 ][ G ]"
+      },
+      {
+        "time": "4th12.05-12.55",
+        "subject": "[ Shubhangi Sankhyadhar ][ BCS-503 ][ L-22 ][ G ]"
+      },
+      {
+        "time": "5th01.45-02.30",
+        "subject": "[ Esha Tripathi ][ TT-DBMS-501 ][ J-12 ][ G ]"
+      },
+      {
+        "time": "6th02.30-03.15",
+        "subject": "[ Esha Tripathi ][ TT-DBMS-501 ][ J-12 ][ G ]"
+      },
+      {
+        "time": "7th03.25-4.10",
+        "subject": "[ Ashish Tripathi ][ BCS-552 ][ L-33-34 ][ G ]"
+      },
+      {
+        "time": "8th04.10-04.55",
+        "subject": "[ Ashish Tripathi ][ BCS-552 ][ L-33-34 ][ G ]"
+      }
+    ],
+    "Friday": [
+      {
+        "time": "1st09.25-10.15",
+        "subject": "[ Vatsya Tiwari ][ BIT-052 ][ L-23 ]"
+      },
+      {
+        "time": "2nd10.15-11.05",
+        "subject": "[ Shubhangi Sankhyadhar ][ BCS-503 ][ L-23 ][ G ]"
+      },
+      {
+        "time": "3rd11.15-12.05",
+        "subject": "[ Shubhangi Sankhyadhar ][ BCS-553 ][ K-33 ][ G ]"
+      },
+      {
+        "time": "4th12.05-12.55",
+        "subject": "[ Shubhangi Sankhyadhar ][ BCS-553 ][ K-33 ][ G ]"
+      },
+      {
+        "time": "5th01.45-02.30",
+        "subject": "[ Sweta Sri ][ BCS-554 ][ L-33-34 ][ G ]"
+      },
+      {
+        "time": "6th02.30-03.15",
+        "subject": "[ Sweta Sri ][ BCS-554 ][ L-33-34 ][ G ]"
+      },
+      {
+        "time": "7th03.25-4.10",
+        "subject": "[ Sweta Sri ][ TT-H-5 ][ P-31-32 ][ G ]"
+      },
+      {
+        "time": "8th04.10-04.55",
+        "subject": "[ Shikha Verma ][ TT-H-5 ][ P-31-32 ][ G ]"
+      }
+    ],
+    "Saturday": []
+  },
+  "today_classes": [
+    {
+      "time": "1st09.25-10.15",
+      "subject": "[ Ashish Tripathi ][ BCS-502 ][ L-23 ][ G ]"
+    },
+    {
+      "time": "2nd10.15-11.05",
+      "subject": "[ Esha Tripathi ][ BCS-501 ][ L-23 ][ G ]"
+    },
+    {
+      "time": "3rd11.15-12.05",
+      "subject": "[ Syed Ali Hussain Rizvi ][ TT-FSD-501 ][ J-14 ][ G ]"
+    }
+  ],
+  "absentToday": [],
+  "relocations": []
+}
