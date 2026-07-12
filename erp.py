@@ -433,11 +433,11 @@ def get_daily_attendance(session):
 
 
 # ─────────────────────────────────────────
-# BUNK BUDGET
+# MISS MARGIN
 # ─────────────────────────────────────────
 
-def calc_bunk_budget(attendance):
-    """Calculate how many classes can be bunked or how many are needed to reach 75%."""
+def calc_miss_margin(attendance):
+    """Calculate how many classes can be missed or how many are needed to reach 75%."""
     if not isinstance(attendance, dict):
         return None
     try:
@@ -446,13 +446,13 @@ def calc_bunk_budget(attendance):
     except (TypeError, ValueError, KeyError):
         return None
 
-    can_bunk    = max(0, int((present / 0.75) - total))
+    can_miss    = max(0, int((present / 0.75) - total))
     need_attend = 0
     if total > 0 and present / total < 0.75:
         need_attend = max(0, int((0.75 * total - present) / 0.25) + 1)
 
     return {
-        "can_bunk":    can_bunk,
+        "can_miss":    can_miss,
         "need_attend": need_attend,
         "present":     present,
         "total":       total,

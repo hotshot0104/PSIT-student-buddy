@@ -88,14 +88,14 @@ function attendanceEmoji(pct) {
   return "🚨";
 }
 
-function calcBunkBudget(present, total) {
-  if (total === 0) return { canBunk: 0, needAttend: 0 };
-  const canBunk = Math.max(0, Math.floor((present / 0.75) - total));
+function calcMissMargin(present, total) {
+  if (total === 0) return { canMiss: 0, needAttend: 0 };
+  const canMiss = Math.max(0, Math.floor((present / 0.75) - total));
   let needAttend = 0;
   if (present / total < 0.75) {
     needAttend = Math.max(0, Math.ceil((0.75 * total - present) / 0.25));
   }
-  return { canBunk, needAttend };
+  return { canMiss, needAttend };
 }
 
 const DAY_NAMES = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
@@ -157,12 +157,12 @@ function buildGauge(pct) {
 }
 
 // ── Bunk Budget Calculator ───────────────────────────────────────
-function calcBunkBudget(present, total) {
-  const canBunk    = Math.max(0, Math.floor((present / 0.75) - total));
+function calcMissMargin(present, total) {
+  const canMiss    = Math.max(0, Math.floor((present / 0.75) - total));
   const needAttend = present / total < 0.75
     ? Math.max(0, Math.ceil((0.75 * total - present) / 0.25))
     : 0;
-  return { canBunk, needAttend };
+  return { canMiss, needAttend };
 }
 
 // ── Today's Timeline ─────────────────────────────────────────────
@@ -234,21 +234,21 @@ function renderDashboard() {
   document.getElementById("gauge-present").textContent = attendance.present;
   document.getElementById("gauge-total").textContent   = attendance.total;
 
-  // Bunk Budget
-  const budget = calcBunkBudget(attendance.present, attendance.total);
-  const bunkEl = document.getElementById("bunk-count");
-  if (budget.canBunk > 0) {
-    bunkEl.textContent = budget.canBunk;
-    bunkEl.className   = "bunk-big color-success";
-    document.getElementById("bunk-label").textContent = "classes you can still skip";
-    document.getElementById("bunk-recover").style.display = "none";
+  // Miss Margin
+  const margin = calcMissMargin(attendance.present, attendance.total);
+  const missEl = document.getElementById("miss-count");
+  if (margin.canMiss > 0) {
+    missEl.textContent = margin.canMiss;
+    missEl.className   = "miss-big color-success";
+    document.getElementById("miss-label").textContent = "classes you can still miss";
+    document.getElementById("miss-recover").style.display = "none";
   } else {
-    bunkEl.textContent = budget.needAttend;
-    bunkEl.className   = "bunk-big color-danger";
-    document.getElementById("bunk-label").textContent = "classes needed to reach 75%";
-    const recoverEl = document.getElementById("bunk-recover");
+    missEl.textContent = margin.needAttend;
+    missEl.className   = "miss-big color-danger";
+    document.getElementById("miss-label").textContent = "classes needed to reach 75%";
+    const recoverEl = document.getElementById("miss-recover");
     recoverEl.style.display = "block";
-    recoverEl.textContent   = `🚨 Attend ${budget.needAttend} consecutive classes to recover.`;
+    recoverEl.textContent   = `🚨 Attend ${margin.needAttend} consecutive classes to recover.`;
   }
 
   // Timeline
@@ -413,7 +413,7 @@ async function fetchLiveData() {
 // ── Boot ──────────────────────────────────────────────────────────
 fetchLiveData();
 
-// ── Bunk Simulator Logic ──────────────────────────────────────────
+// ── Miss Simulator Logic ──────────────────────────────────────────
 let simState = {}; // Holds dynamic simulated edits per subject index
 
 function renderSimulator() {
@@ -426,7 +426,7 @@ function renderSimulator() {
   // Initialize simulation state if empty or changed
   subjects.forEach((s, idx) => {
     if (simState[idx] === undefined) {
-      simState[idx] = { attend: 0, bunk: 0 };
+      simState[idx] = { attend: 0, miss: 0 };
     }
   });
 
@@ -437,7 +437,7 @@ function renderSimulator() {
     subjects.forEach((s, idx) => {
       const state = simState[idx];
       const p = s.present + state.attend;
-      const t = s.total + state.attend + state.bunk;
+      const t = s.total + state.attend + state.miss;
       totalPresent += p;
       totalClasses += t;
 
@@ -458,17 +458,17 @@ function renderSimulator() {
 
         // Update value badges
         card.querySelector(`.sim-badge-attend`).textContent = state.attend;
-        card.querySelector(`.sim-badge-bunk`).textContent = state.bunk;
+        card.querySelector(`.sim-badge-miss`).textContent = state.miss;
 
-        // Update bunk budget descriptor text
-        const budget = calcBunkBudget(p, t);
+        // Update miss margin descriptor text
+        const margin = calcMissMargin(p, t);
         const metaText = card.querySelector(".sim-meta-text");
-        if (budget) {
-          if (budget.canBunk > 0) {
-            metaText.innerHTML = `✅ You can skip <strong>${budget.canBunk}</strong> more class(es).`;
+        if (margin) {
+          if (margin.canMiss > 0) {
+            metaText.innerHTML = `✅ You can miss <strong>${margin.canMiss}</strong> more class(es).`;
             metaText.className = "sim-meta-text color-success";
           } else {
-            metaText.innerHTML = `🚨 Attend <strong>${budget.needAttend}</strong> consecutive class(es) to recover.`;
+            metaText.innerHTML = `🚨 Attend <strong>${margin.needAttend}</strong> consecutive class(es) to recover.`;
             metaText.className = "sim-meta-text color-danger";
           }
         }
@@ -496,7 +496,7 @@ function renderSimulator() {
     } else {
       statusEl.textContent = "Critical Danger";
       statusEl.className = "color-danger";
-      verdictEl.textContent = "Under 75%! You will receive automated warnings and cannot bunk any more.";
+      verdictEl.textContent = "Under 75%! You will receive automated warnings and cannot miss any more.";
     }
   }
 
@@ -532,11 +532,11 @@ function renderSimulator() {
           </div>
         </div>
         <div class="sim-row">
-          <span class="sim-slider-label">Bunk future classes:</span>
+          <span class="sim-slider-label">Miss future classes:</span>
           <div class="sim-slider-wrap">
-            <input type="range" class="sim-slider sim-input-bunk" 
-              min="0" max="20" value="${state.bunk}" data-idx="${idx}" />
-            <span class="sim-value-badge sim-badge-bunk">${state.bunk}</span>
+            <input type="range" class="sim-slider sim-input-miss" 
+              min="0" max="20" value="${state.miss}" data-idx="${idx}" />
+            <span class="sim-value-badge sim-badge-miss">${state.miss}</span>
           </div>
         </div>
       </div>
@@ -549,8 +549,8 @@ function renderSimulator() {
       recalculateAll();
     });
 
-    card.querySelector(".sim-input-bunk").addEventListener("input", function(e) {
-      simState[idx].bunk = parseInt(e.target.value) || 0;
+    card.querySelector(".sim-input-miss").addEventListener("input", function(e) {
+      simState[idx].miss = parseInt(e.target.value) || 0;
       recalculateAll();
     });
 

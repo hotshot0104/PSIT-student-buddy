@@ -305,19 +305,19 @@ body {
   color: var(--text-1);
 }
 
-/* ── Bunk Budget Card ─────────────────────────────────────────── */
-.bunk-big {
+/* ── Miss Margin Card ─────────────────────────────────────────── */
+.miss-big {
   font-size: 52px;
   font-weight: 800;
   line-height: 1;
   margin: 12px 0 8px;
 }
-.bunk-label {
+.miss-label {
   font-size: 13px;
   color: var(--text-2);
   margin-bottom: 16px;
 }
-.bunk-recover {
+.miss-recover {
   font-size: 13px;
   padding: 10px 14px;
   background: rgba(239,68,68,0.1);
@@ -585,7 +585,7 @@ body {
   .attendance-grid { grid-template-columns: 1fr; }
 }
 
-/* ── Bunk Simulator Styles ─────────────────────────────────────── */
+/* ── Miss Simulator Styles ─────────────────────────────────────── */
 .sim-controls {
   margin-top: 14px;
   display: flex;

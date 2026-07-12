@@ -19,6 +19,9 @@ A full-featured academic assistant for PSIT students — delivered through a **T
 | 🗓️ **Full Timetable** | View your entire week's schedule at a glance |
 | ⚡ **Session Caching** | Smart login logic — re-authenticates only when needed |
 | 🌐 **Web Dashboard** | Beautiful dark-mode UI showing attendance gauge, timeline, and weekly schedule |
+| 🔄 **Relocation Detection**| Automatically detects rescheduled, swapped, or added classes and lists them in the morning briefing |
+| 🔮 **Attendance Simulator**| Predicts future attendance based on 'what-if' (attended/skipped) scenarios in Telegram (via `/simulate`) and the web dashboard |
+
 
 ---
 

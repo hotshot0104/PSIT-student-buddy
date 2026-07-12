@@ -46,7 +46,7 @@ IST = timezone(timedelta(hours=5, minutes=30))
 MAIN_KEYBOARD = ReplyKeyboardMarkup(
     [
         ["📅 Today",       "📆 Tomorrow"],
-        ["📊 Attendance",  "📉 Bunk Budget"],
+        ["📊 Attendance",  "📉 Miss Margin"],
         ["🗓️ This Week",  "⚙️ Settings"],
         ["❓ Help",        "📜 Logs"],
     ],
@@ -124,28 +124,28 @@ def _attendance_text(attendance) -> str:
     return text
 
 
-def _bunk_text(attendance) -> str:
-    """Format the bunk budget response."""
-    budget = erp.calc_bunk_budget(attendance)
-    if budget is None:
-        return "⚠️ Couldn't calculate bunk budget (missing present/total data)."
+def _miss_margin_text(attendance) -> str:
+    """Format the miss margin response."""
+    margin = erp.calc_miss_margin(attendance)
+    if margin is None:
+        return "⚠️ Couldn't calculate miss margin (missing present/total data)."
 
     emoji = erp.attendance_emoji(attendance.get("overall", 0))
     pct   = attendance.get("percent", "?")
-    p, t  = budget["present"], budget["total"]
+    p, t  = margin["present"], margin["total"]
 
-    if budget["can_bunk"] > 0:
+    if margin["can_miss"] > 0:
         return (
-            f"📊 *Bunk Budget*\n"
+            f"📊 *Miss Margin*\n"
             f"Current: {emoji} {pct} ({p}/{t})\n\n"
-            f"✅ You can skip *{budget['can_bunk']} more class(es)* "
+            f"✅ You can miss *{margin['can_miss']} more class(es)* "
             f"and still stay above 75%."
         )
     return (
-        f"📊 *Bunk Budget*\n"
+        f"📊 *Miss Margin*\n"
         f"Current: {emoji} {pct} ({p}/{t})\n\n"
-        f"🚨 You *cannot bunk any more classes!*\n"
-        f"Attend *{budget['need_attend']} consecutive class(es)* to get back to 75%."
+        f"🚨 You *cannot miss any more classes!*\n"
+        f"Attend *{margin['need_attend']} consecutive class(es)* to get back to 75%."
     )
 
 
@@ -162,7 +162,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• 📅 Daily timetable & attendance briefing at *7 AM*\n"
         "• 🔔 Class reminders *15 minutes* before each lecture\n"
         "• ⚠️ Absent alert at *8 PM* if you missed a class\n"
-        "• 📉 Bunk budget calculator\n"
+        "• 📉 Miss margin calculator\n"
         "• 🔮 Attendance Simulator (/simulate command)\n\n"
         "Use the menu below to get started! 🎓",
         parse_mode="Markdown",
@@ -177,7 +177,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "📅 Today":      cmd_today,
         "📆 Tomorrow":   cmd_tomorrow,
         "📊 Attendance": cmd_attendance,
-        "📉 Bunk Budget":cmd_bunk,
+        "📉 Miss Margin":cmd_miss_margin,
         "🗓️ This Week": cmd_week,
         "⚙️ Settings":   cmd_settings,
         "❓ Help":        cmd_help,
@@ -224,19 +224,19 @@ async def cmd_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
     text = _attendance_text(data.get("attendance", {}))
     kb = InlineKeyboardMarkup([[
-        InlineKeyboardButton("📉 View Bunk Budget", callback_data="bunk")
+        InlineKeyboardButton("📉 View Miss Margin", callback_data="miss_margin")
     ]])
     await msg.edit_text(text, parse_mode="Markdown", reply_markup=kb)
 
 
-async def cmd_bunk(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = await update.message.reply_text("⏳ Calculating bunk budget...")
+async def cmd_miss_margin(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = await update.message.reply_text("⏳ Calculating miss margin...")
     data = await _get_cached_data_or_scrape()
     if not data:
         await msg.edit_text("⚠️ Could not load data from cache or ERP.")
         return
         
-    await msg.edit_text(_bunk_text(data.get("attendance", {})), parse_mode="Markdown")
+    await msg.edit_text(_miss_margin_text(data.get("attendance", {})), parse_mode="Markdown")
 
 
 async def cmd_week(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -288,11 +288,11 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "*📅 Today* — Today's class schedule\n"
         "*📆 Tomorrow* — Tomorrow's classes\n"
         "*📊 Attendance* — Overall & subject-wise attendance\n"
-        "*📉 Bunk Budget* — Classes you can skip / need to attend\n"
+        "*📉 Miss Margin* — Classes you can skip / need to attend\n"
         "*🗓️ This Week* — Full weekly timetable\n"
         "*⚙️ Settings* — View current bot configuration\n"
         "*📜 Logs* — Today's reminder activity log\n"
-        "*/simulate [sub] [att] [bunk]* — Predict attendance change\n\n"
+        "*/simulate [sub] [att] [miss]* — Predict attendance change\n\n"
         "*🤖 Auto Features:*\n"
         "• Morning briefing at *7 AM* daily\n"
         "• Reminders *15 min* before each class starts\n"
@@ -317,7 +317,7 @@ async def cmd_logs(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_simulate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
-    Predict attendance: /simulate [subject_fragment] [attended_count] [skipped_count]
+    Predict attendance: /simulate [subject_fragment] [attended_count] [missed_count]
     Example: /simulate OS 5 2
     """
     if not is_authorized(update):
@@ -326,8 +326,8 @@ async def cmd_simulate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     args = context.args
     if len(args) < 3:
         await update.message.reply_text(
-            "⚠️ *Usage:*\n`/simulate [subject_name] [to_attend] [to_skip]`\n\n"
-            "*Example:* `/simulate OS 5 2` (predicts percentage if you attend 5 classes and skip 2 more)",
+            "⚠️ *Usage:*\n`/simulate [subject_name] [to_attend] [to_miss]`\n\n"
+            "*Example:* `/simulate OS 5 2` (predicts percentage if you attend 5 classes and miss 2 more)",
             parse_mode="Markdown"
         )
         return
@@ -370,24 +370,24 @@ async def cmd_simulate(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pct_new = (p_new / t_new * 100) if t_new > 0 else 0.0
     emoji = erp.attendance_emoji(pct_new)
     
-    # Recalculate bunk budget for simulated state
-    sim_budget = erp.calc_bunk_budget({"present": p_new, "total": t_new})
+    # Recalculate miss margin for simulated state
+    sim_margin = erp.calc_miss_margin({"present": p_new, "total": t_new})
     
     reply = (
         f"🔮 *Simulated Attendance Predictor*\n"
         f"Subject: *{target['name']}*\n\n"
         f"📊 *Current Status:*\n"
         f"• {target['present']}/{target['total']} lectures ({target['percent']:.1f}%)\n\n"
-        f"⚡ *Simulated Status (Attending {to_attend}, Bunking {to_skip}):*\n"
+        f"⚡ *Simulated Status (Attending {to_attend}, Missing {to_skip}):*\n"
         f"• *{p_new}/{t_new}* lectures attended\n"
         f"• New Percentage: {emoji} *{pct_new:.2f}%*\n\n"
     )
     
-    if sim_budget:
-        if sim_budget["can_bunk"] > 0:
-            reply += f"✅ You can skip *{sim_budget['can_bunk']} more classes* after this."
+    if sim_margin:
+        if sim_margin["can_miss"] > 0:
+            reply += f"✅ You can miss *{sim_margin['can_miss']} more classes* after this."
         else:
-            reply += f"🚨 You will need to attend *{sim_budget['need_attend']} consecutive classes* to recover back to 75%."
+            reply += f"🚨 You will need to attend *{sim_margin['need_attend']} consecutive classes* to recover back to 75%."
             
     await update.message.reply_text(reply, parse_mode="Markdown")
 
@@ -413,12 +413,12 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text, kb = _timetable_text(day_name, classes, offset)
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=kb)
 
-    elif query.data == "bunk":
+    elif query.data == "miss_margin":
         data = await _get_cached_data_or_scrape()
         if not data:
-            await query.edit_message_text("⚠️ Could not load budget data.")
+            await query.edit_message_text("⚠️ Could not load margin data.")
             return
-        await query.edit_message_text(_bunk_text(data.get("attendance", {})), parse_mode="Markdown")
+        await query.edit_message_text(_miss_margin_text(data.get("attendance", {})), parse_mode="Markdown")
 
 
 # ─────────────────────────────────────────
