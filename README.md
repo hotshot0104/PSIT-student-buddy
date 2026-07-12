@@ -4,7 +4,6 @@ A powerful Discord bot designed to automate your PSIT ERP life. Get your timetab
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Discord.js](https://img.shields.io/badge/Discord.py-2.0+-5865F2?style=for-the-badge&logo=discord&logoColor=white)
-![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-Automated-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
 
 ---
 
@@ -60,21 +59,6 @@ Everything you need is just a slash-less command away:
    ```bash
    python bot2.0.py
    ```
-
----
-
-## ☁️ Continuous Hosting (GitHub Actions)
-
-This repository comes pre-configured with a GitHub Actions workflow to run the bot 24/7 (via 6-hour restarts).
-
-1. Go to your repository on GitHub.
-2. Navigate to **Settings > Secrets and variables > Actions**.
-3. Add the following **Repository secrets**:
-   - `DISCORD_TOKEN`: Your bot token.
-   - `DISCORD_USER_ID`: Your numerical Discord ID.
-   - `ERP_USER`: Your ERP Roll Number.
-   - `ERP_PASSWORD`: Your ERP Password.
-4. Go to the **Actions** tab and enable the workflow.
 
 ---
 

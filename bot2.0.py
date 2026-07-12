@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ─────────────────────────────────────────
-# CONFIGURATION — fill these in via Environment Variables / GitHub Secrets
+# CONFIGURATION — fill these in via Environment Variables (use a .env file locally)
 # ─────────────────────────────────────────
 ERP_USER      = os.getenv("ERP_USER", "").strip()
 ERP_PASSWORD  = os.getenv("ERP_PASSWORD", "").strip()
