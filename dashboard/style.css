@@ -584,3 +584,81 @@ body {
   .week-grid { grid-template-columns: repeat(3, 1fr); }
   .attendance-grid { grid-template-columns: 1fr; }
 }
+
+/* ── Bunk Simulator Styles ─────────────────────────────────────── */
+.sim-controls {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.sim-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+  color: var(--text-2);
+}
+.sim-slider-label {
+  width: 130px;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+.sim-slider-wrap {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.sim-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  outline: none;
+  transition: background var(--transition);
+}
+.sim-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--primary-glow);
+  transition: transform var(--transition);
+}
+.sim-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+.sim-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--primary-light);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 0 10px var(--primary-glow);
+  transition: transform var(--transition);
+}
+.sim-slider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+}
+.sim-value-badge {
+  font-size: 11px;
+  font-weight: 600;
+  width: 24px;
+  text-align: right;
+  color: var(--text-1);
+}
+.sim-meta-text {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 8px;
+  text-align: right;
+}
+

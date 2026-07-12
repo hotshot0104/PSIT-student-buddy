@@ -82,7 +82,12 @@ def save_settings():
         erp._cached_session = None
         erp._session_last_check = None
 
-        print(f"📝 Credentials updated via Web Settings: User={erp_user}")
+        # Re-fetch and update the cache file immediately with the new credentials
+        session, err = erp.get_session()
+        if not err:
+            erp.fetch_and_cache_all(session)
+
+        print(f"📝 Credentials updated and cache refreshed via Web Settings: User={erp_user}")
         return jsonify({"status": "success", "message": "Settings updated successfully."})
     except Exception as e:
         print(f"❌ Failed to save settings: {e}")
@@ -99,71 +104,22 @@ def serve_static(path):
 
 @app.route('/api/data')
 def get_live_data():
-    """Fetch live data from the ERP."""
-    print("🔄 Live dashboard request received. Fetching from ERP...")
+    """Fetch data from local cache, or scrape once if cache is missing."""
+    cache = erp.load_cache()
+    if cache:
+        # Check if cache is for the current ERP user. If not, ignore it and re-fetch.
+        if cache.get("student", {}).get("roll") == erp.ERP_USER:
+            print("💾 Serving dashboard data from local cache.")
+            return jsonify(cache)
+
+    print("🔄 Cache missing or outdated. Scraping from ERP...")
     session, err = erp.get_session()
     if err:
         return jsonify({"error": err}), 500
 
-    # 1. Fetch attendance
-    attendance = erp.get_attendance(session)
-    if isinstance(attendance, str):
-        return jsonify({"error": attendance}), 500
-
-    # 2. Fetch today's classes
-    day_name, classes = erp.get_today_classes(session)
-    
-    # 3. Fetch weekly timetable
-    week_tt = erp.get_week_timetable(session)
-
-    # 4. Fetch daily attendance (if available)
-    daily_attendance = erp.get_daily_attendance(session)
-
-    # 5. Format weekly timetable for frontend
-    formatted_week = {}
-    if isinstance(week_tt, list):
-        for day, cls_list in week_tt:
-            if isinstance(cls_list, list):
-                formatted_week[day] = [
-                    {"time": c["time_label"], "subject": c["subject"]} for c in cls_list
-                ]
-
-    # Calculate overall budget
-    bunk_budget = erp.calc_bunk_budget(attendance)
-
-    student_name = erp.ERP_USER
-    
-    # Pack everything
-    data = {
-        "student": {
-            "name": student_name,
-            "roll": erp.ERP_USER,
-            "branch": "PSIT Student"
-        },
-        "attendance": {
-            "overall": attendance.get("percent_val", 0.0),
-            "percent": attendance.get("percent", "0.0%"),
-            "present": attendance.get("present", 0),
-            "total": attendance.get("total", 0),
-            "subjects": [
-                {
-                    "name": s["subject"],
-                    "percent": float(s["percent"].replace("%", "")) if s["percent"] else 0.0,
-                    "present": int(s["present"]) if s["present"] else 0,
-                    "total": int(s["total"]) if s["total"] else 0
-                }
-                for s in attendance.get("subjects", [])
-            ]
-        },
-        "timetable": formatted_week,
-        "today_classes": [
-            {"time": c["time_label"], "subject": c["subject"]}
-            for c in classes
-        ] if isinstance(classes, list) else [],
-        "absentToday": [
-            r["subject"] for r in daily_attendance if "absent" in r.get("status", "").lower()
-        ] if daily_attendance else []
-    }
+    data = erp.fetch_and_cache_all(session)
+    if data is None:
+        return jsonify({"error": "Failed to scrape data."}), 500
 
     return jsonify(data)
 

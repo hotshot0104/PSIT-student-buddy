@@ -71,11 +71,28 @@ def is_authorized(update: Update) -> bool:
     return update.effective_user is not None and update.effective_user.id == TELEGRAM_USER_ID
 
 
+async def _get_cached_data_or_scrape() -> dict:
+    """Read the local cache, or trigger a scrape if missing/stale."""
+    cache = erp.load_cache()
+    if cache and cache.get("student", {}).get("roll") == erp.ERP_USER:
+        return cache
+
+    # Fallback: scrape once to initialize cache
+    session, err = erp.get_session()
+    if not err:
+        data = erp.fetch_and_cache_all(session)
+        if data:
+            return data
+    return {}
+
+
 def _timetable_text(day_name, classes, offset: int):
     """Format a timetable response and build navigation inline keyboard."""
     if isinstance(classes, list) and classes:
-        lines = "\n".join(erp.format_classes(classes))
-        text  = f"📅 *Classes for {day_name}:*\n\n{lines}"
+        lines = []
+        for c in classes:
+            lines.append(f"🕐 {c.get('time') or c.get('time_label')} — {c.get('subject')}")
+        text  = f"📅 *Classes for {day_name}:*\n\n" + "\n".join(lines)
     elif isinstance(classes, list):
         text = f"🎉 No classes on *{day_name}*! Free day!"
     else:
@@ -93,7 +110,7 @@ def _attendance_text(attendance) -> str:
     if not isinstance(attendance, dict):
         return str(attendance)
 
-    emoji = erp.attendance_emoji(attendance.get("percent_val", 0))
+    emoji = erp.attendance_emoji(attendance.get("overall", 0))
     text  = f"📊 *Overall Attendance:* {emoji} *{attendance['percent']}*"
     if attendance.get("present") is not None and attendance.get("total") is not None:
         text += f"\n({attendance['present']}/{attendance['total']} classes attended)"
@@ -102,12 +119,12 @@ def _attendance_text(attendance) -> str:
     if subjects:
         text += "\n\n*📚 Subject-wise Breakdown:*"
         for s in subjects:
-            se    = erp.attendance_emoji(s.get("percent", "0"))
-            name  = (s.get("subject") or "Unknown")[:28]
-            pct   = s.get("percent",  "N/A")
-            pres  = s.get("present",  "?")
-            tot   = s.get("total",    "?")
-            text += f"\n{se} {name}: *{pct}* ({pres}/{tot})"
+            se    = erp.attendance_emoji(s.get("percent", 0))
+            name  = (s.get("name") or "Unknown")[:28]
+            pct   = s.get("percent", 0.0)
+            pres  = s.get("present", "?")
+            tot   = s.get("total",   "?")
+            text += f"\n{se} {name}: *{pct:.1f}%* ({pres}/{tot})"
     return text
 
 
@@ -117,7 +134,7 @@ def _bunk_text(attendance) -> str:
     if budget is None:
         return "⚠️ Couldn't calculate bunk budget (missing present/total data)."
 
-    emoji = erp.attendance_emoji(attendance.get("percent_val", 0))
+    emoji = erp.attendance_emoji(attendance.get("overall", 0))
     pct   = attendance.get("percent", "?")
     p, t  = budget["present"], budget["total"]
 
@@ -149,7 +166,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "• 📅 Daily timetable & attendance briefing at *7 AM*\n"
         "• 🔔 Class reminders *15 minutes* before each lecture\n"
         "• ⚠️ Absent alert at *8 PM* if you missed a class\n"
-        "• 📉 Bunk budget calculator\n\n"
+        "• 📉 Bunk budget calculator\n"
+        "• 🔮 Attendance Simulator (/simulate command)\n\n"
         "Use the menu below to get started! 🎓",
         parse_mode="Markdown",
         reply_markup=MAIN_KEYBOARD,
@@ -175,36 +193,41 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def cmd_today(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = await update.message.reply_text("⏳ Fetching from ERP...")
-    session, err = await asyncio.to_thread(erp.get_session)
-    if err:
-        await msg.edit_text(err)
+    msg = await update.message.reply_text("⏳ Fetching from cache...")
+    data = await _get_cached_data_or_scrape()
+    if not data:
+        await msg.edit_text("⚠️ Could not load data from cache or ERP.")
         return
-    day_name, classes = await asyncio.to_thread(erp.get_today_classes, session)
+        
+    day_name = datetime.now(tz=IST).strftime("%A")
+    classes = data.get("today_classes", [])
     text, kb = _timetable_text(day_name, classes, 0)
     await msg.edit_text(text, parse_mode="Markdown", reply_markup=kb)
 
 
 async def cmd_tomorrow(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = await update.message.reply_text("⏳ Fetching from ERP...")
-    session, err = await asyncio.to_thread(erp.get_session)
-    if err:
-        await msg.edit_text(err)
+    msg = await update.message.reply_text("⏳ Fetching from cache...")
+    data = await _get_cached_data_or_scrape()
+    if not data:
+        await msg.edit_text("⚠️ Could not load data from cache or ERP.")
         return
-    day_name, classes = await asyncio.to_thread(erp.get_classes_for_day, session, 1)
-    text, kb = _timetable_text(day_name, classes, 1)
+
+    tomorrow_idx = (datetime.now(tz=IST).weekday() + 1) % 7
+    tomorrow_name = erp.DAY_NAMES[tomorrow_idx]
+    classes = data.get("timetable", {}).get(tomorrow_name, [])
+    text, kb = _timetable_text(tomorrow_name, classes, 1)
     await msg.edit_text(text, parse_mode="Markdown", reply_markup=kb)
 
 
 async def cmd_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = await update.message.reply_text("⏳ Fetching attendance from ERP...")
-    session, err = await asyncio.to_thread(erp.get_session)
-    if err:
-        await msg.edit_text(err)
+    msg = await update.message.reply_text("⏳ Fetching attendance from cache...")
+    data = await _get_cached_data_or_scrape()
+    if not data:
+        await msg.edit_text("⚠️ Could not load data from cache or ERP.")
         return
-    attendance = await asyncio.to_thread(erp.get_attendance, session)
-    text       = _attendance_text(attendance)
-    kb         = InlineKeyboardMarkup([[
+        
+    text = _attendance_text(data.get("attendance", {}))
+    kb = InlineKeyboardMarkup([[
         InlineKeyboardButton("📉 View Bunk Budget", callback_data="bunk")
     ]])
     await msg.edit_text(text, parse_mode="Markdown", reply_markup=kb)
@@ -212,30 +235,32 @@ async def cmd_attendance(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cmd_bunk(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = await update.message.reply_text("⏳ Calculating bunk budget...")
-    session, err = await asyncio.to_thread(erp.get_session)
-    if err:
-        await msg.edit_text(err)
+    data = await _get_cached_data_or_scrape()
+    if not data:
+        await msg.edit_text("⚠️ Could not load data from cache or ERP.")
         return
-    attendance = await asyncio.to_thread(erp.get_attendance, session)
-    await msg.edit_text(_bunk_text(attendance), parse_mode="Markdown")
+        
+    await msg.edit_text(_bunk_text(data.get("attendance", {})), parse_mode="Markdown")
 
 
 async def cmd_week(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    msg = await update.message.reply_text("⏳ Fetching full week timetable...")
-    session, err = await asyncio.to_thread(erp.get_session)
-    if err:
-        await msg.edit_text(err)
+    msg = await update.message.reply_text("⏳ Fetching weekly timetable...")
+    data = await _get_cached_data_or_scrape()
+    if not data:
+        await msg.edit_text("⚠️ Could not load data from cache or ERP.")
         return
-    week      = await asyncio.to_thread(erp.get_week_timetable, session)
-    today_idx = datetime.now(tz=IST).weekday()
-    parts     = ["🗓️ *This Week's Timetable:*\n"]
 
-    for i, (day_name, classes) in enumerate(week):
+    week = data.get("timetable", {})
+    today_idx = datetime.now(tz=IST).weekday()
+    parts = ["🗓️ *This Week's Timetable:*\n"]
+
+    for i, day_name in enumerate(["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]):
+        classes = week.get(day_name, [])
         marker = "📍 " if i == today_idx else ""
-        if isinstance(classes, list) and classes:
-            lines = "\n".join(f"  • {c['time_label']} — {c['subject']}" for c in classes)
+        if classes:
+            lines = "\n".join(f"  • {c['time']} — {c['subject']}" for c in classes)
             parts.append(f"{marker}*{day_name}*\n{lines}")
-        elif isinstance(classes, list):
+        else:
             parts.append(f"{marker}*{day_name}* — 🎉 No classes")
 
     reply = "\n\n".join(parts)
@@ -251,10 +276,10 @@ async def cmd_settings(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "⚙️ *Settings*\n\n"
         f"ERP User: {'✅ Set' if erp.ERP_USER else '❌ Not set'}\n"
         f"ERP Password: {'✅ Set' if erp.ERP_PASSWORD else '❌ Not set'}\n\n"
-        f"⏰ Morning briefing: *7:00 AM IST*\n"
-        f"🔔 Class reminder: *15 min before each class*\n"
-        f"⚠️ Absent warning: *8:00 PM IST*\n\n"
-        f"_To change credentials, edit `.env` and restart the bot._"
+        f"⏰ Morning briefing: *7:00 AM IST* (1 Login)\n"
+        f"⚠️ Absent warning: *8:00 PM IST* (1 Login)\n"
+        f"💾 Cache Mode: *Enabled* (All other commands load from local disk cache)\n\n"
+        f"_Configure credentials dynamically in the web dashboard!_"
     )
     await update.message.reply_text(reply, parse_mode="Markdown")
 
@@ -270,11 +295,13 @@ async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "*📉 Bunk Budget* — Classes you can skip / need to attend\n"
         "*🗓️ This Week* — Full weekly timetable\n"
         "*⚙️ Settings* — View current bot configuration\n"
-        "*📜 Logs* — Today's reminder activity log\n\n"
+        "*📜 Logs* — Today's reminder activity log\n"
+        "*/simulate [sub] [att] [bunk]* — Predict attendance change\n\n"
         "*🤖 Auto Features:*\n"
         "• Morning briefing at *7 AM* daily\n"
         "• Reminders *15 min* before each class starts\n"
-        "• Absent alert at *8 PM* if you missed a lecture"
+        "• Absent alert at *8 PM* if you missed a lecture\n"
+        "• *Timetable Swap alert* during morning briefing"
     )
     await update.message.reply_text(reply, parse_mode="Markdown")
 
@@ -292,6 +319,83 @@ async def cmd_logs(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 
+async def cmd_simulate(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Predict attendance: /simulate [subject_fragment] [attended_count] [skipped_count]
+    Example: /simulate OS 5 2
+    """
+    if not is_authorized(update):
+        return
+        
+    args = context.args
+    if len(args) < 3:
+        await update.message.reply_text(
+            "⚠️ *Usage:*\n`/simulate [subject_name] [to_attend] [to_skip]`\n\n"
+            "*Example:* `/simulate OS 5 2` (predicts percentage if you attend 5 classes and skip 2 more)",
+            parse_mode="Markdown"
+        )
+        return
+
+    sub_query = args[0].lower()
+    try:
+        to_attend = int(args[1])
+        to_skip = int(args[2])
+    except ValueError:
+        await update.message.reply_text("⚠️ Attended and skipped class counts must be numbers.")
+        return
+
+    data = await _get_cached_data_or_scrape()
+    if not data:
+        await update.message.reply_text("⚠️ Could not load attendance details.")
+        return
+
+    subjects = data.get("attendance", {}).get("subjects", [])
+    target = None
+    for s in subjects:
+        if sub_query in s["name"].lower():
+            target = s
+            break
+
+    if not target:
+        sub_list = "\n".join(f"• `{s['name']}`" for s in subjects)
+        await update.message.reply_text(
+            f"⚠️ Subject matching `{args[0]}` not found.\n\n*Available subjects:*\n{sub_list}",
+            parse_mode="Markdown"
+        )
+        return
+
+    # Simulate
+    p_curr = target["present"]
+    t_curr = target["total"]
+    
+    p_new = p_curr + to_attend
+    t_new = t_curr + to_attend + to_skip
+    
+    pct_new = (p_new / t_new * 100) if t_new > 0 else 0.0
+    emoji = erp.attendance_emoji(pct_new)
+    
+    # Recalculate bunk budget for simulated state
+    sim_budget = erp.calc_bunk_budget({"present": p_new, "total": t_new})
+    
+    reply = (
+        f"🔮 *Simulated Attendance Predictor*\n"
+        f"Subject: *{target['name']}*\n\n"
+        f"📊 *Current Status:*\n"
+        f"• {target['present']}/{target['total']} lectures ({target['percent']:.1f}%)\n\n"
+        f"⚡ *Simulated Status (Attending {to_attend}, Bunking {to_skip}):*\n"
+        f"• *{p_new}/{t_new}* lectures attended\n"
+        f"• New Percentage: {emoji} *{pct_new:.2f}%*\n\n"
+    )
+    
+    if sim_budget:
+        if sim_budget["can_bunk"] > 0:
+            reply += f"✅ You can skip *{sim_budget['can_bunk']} more classes* after this."
+        else:
+            reply += f"🚨 You will need to attend *{sim_budget['need_attend']} consecutive classes* to recover back to 75%."
+            
+    await update.message.reply_text(reply, parse_mode="Markdown")
+
+
 # ─────────────────────────────────────────
 # INLINE KEYBOARD CALLBACK
 # ─────────────────────────────────────────
@@ -302,21 +406,23 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if query.data.startswith("day_"):
         offset = int(query.data.split("_")[1])
-        session, err = await asyncio.to_thread(erp.get_session)
-        if err:
-            await query.edit_message_text(err)
+        data = await _get_cached_data_or_scrape()
+        if not data:
+            await query.edit_message_text("⚠️ Could not load timetable cache.")
             return
-        day_name, classes = await asyncio.to_thread(erp.get_classes_for_day, session, offset)
+            
+        target_idx = (datetime.now(tz=IST).weekday() + offset) % 7
+        day_name = erp.DAY_NAMES[target_idx]
+        classes = data.get("timetable", {}).get(day_name, [])
         text, kb = _timetable_text(day_name, classes, offset)
         await query.edit_message_text(text, parse_mode="Markdown", reply_markup=kb)
 
     elif query.data == "bunk":
-        session, err = await asyncio.to_thread(erp.get_session)
-        if err:
-            await query.edit_message_text(err)
+        data = await _get_cached_data_or_scrape()
+        if not data:
+            await query.edit_message_text("⚠️ Could not load budget data.")
             return
-        attendance = await asyncio.to_thread(erp.get_attendance, session)
-        await query.edit_message_text(_bunk_text(attendance), parse_mode="Markdown")
+        await query.edit_message_text(_bunk_text(data.get("attendance", {})), parse_mode="Markdown")
 
 
 # ─────────────────────────────────────────
@@ -324,42 +430,57 @@ async def callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ─────────────────────────────────────────
 
 async def job_morning_briefing(context: ContextTypes.DEFAULT_TYPE):
-    """7:00 AM IST — Send timetable + attendance summary and snapshot attendance %."""
+    """7:00 AM IST — Scrape ERP, rebuild cache, send daily summary + swap alerts."""
     global _morning_attendance_pct
     try:
         session, err = await asyncio.to_thread(erp.get_session)
         if err:
-            await context.bot.send_message(chat_id=TELEGRAM_USER_ID, text=err)
+            await context.bot.send_message(chat_id=TELEGRAM_USER_ID, text=f"⚠️ Briefing login failed: {err}")
             return
 
-        day_name, classes = await asyncio.to_thread(erp.get_today_classes, session)
-        attendance        = await asyncio.to_thread(erp.get_attendance, session)
+        # Scrape and update the cache file
+        data = await asyncio.to_thread(erp.fetch_and_cache_all, session)
+        if not data:
+            await context.bot.send_message(chat_id=TELEGRAM_USER_ID, text="⚠️ Scheduled morning scrape failed.")
+            return
 
-        # Cache morning attendance for the 8 PM absent-warning comparison
-        if isinstance(attendance, dict):
-            _morning_attendance_pct = attendance.get("percent_val")
+        day_name = datetime.now(tz=IST).strftime("%A")
+        classes = data.get("today_classes", [])
+        attendance = data.get("attendance", {})
 
-        if isinstance(classes, list) and classes:
-            lines      = "\n".join(erp.format_classes(classes))
+        # Cache morning attendance for evening comparison
+        _morning_attendance_pct = attendance.get("overall", 0.0)
+
+        # 1. Timetable Section
+        if classes:
+            lines = "\n".join(f"🕐 {c['time']} — {c['subject']}" for c in classes)
             tt_section = f"📅 *Classes for {day_name}:*\n{lines}"
-        elif isinstance(classes, list):
+        else:
             tt_section = f"🎉 *No classes today ({day_name})! Free day!*"
-        else:
-            tt_section = str(classes)
 
-        if isinstance(attendance, dict):
-            emoji       = erp.attendance_emoji(attendance["percent_val"])
-            att_section = f"📊 *Overall Attendance:* {emoji} {attendance['percent']}"
-            if attendance["present"] is not None and attendance["total"] is not None:
-                att_section += f" ({attendance['present']}/{attendance['total']})"
-        else:
-            att_section = str(attendance)
+        # 2. Attendance Section
+        emoji = erp.attendance_emoji(attendance.get("overall", 0))
+        att_section = f"📊 *Overall Attendance:* {emoji} {attendance.get('percent', '0.0%')}"
+        if attendance.get("present") is not None and attendance.get("total") is not None:
+            att_section += f" ({attendance['present']}/{attendance['total']})"
+
+        # 3. Swap Relocation Section (Feature 3)
+        swap_section = ""
+        relocations = data.get("relocations", [])
+        if relocations:
+            swap_section = "\n\n⚠️ *Timetable Changes/Relocations Detected:*\n"
+            for r in relocations:
+                if r["type"] == "swap":
+                    swap_section += f"• *{r['time']}*: {r['original']} ➔ *{r['new']}*\n"
+                else:
+                    swap_section += f"• *{r['time']}*: Added *{r['new']}*\n"
 
         msg = (
-            f"☀️ *Good morning, {erp.ERP_USER}!*\n\n"
+            f"☀️ *Good morning, {erp.ERP_USER}!* (Cache updated)\n\n"
             f"{tt_section}\n\n"
             f"───────────────\n"
-            f"{att_section}\n\n"
+            f"{att_section}"
+            f"{swap_section}\n\n"
             f"_— PSIT Student Buddy_"
         )
         await context.bot.send_message(chat_id=TELEGRAM_USER_ID, text=msg, parse_mode="Markdown")
@@ -369,7 +490,7 @@ async def job_morning_briefing(context: ContextTypes.DEFAULT_TYPE):
 
 
 async def job_class_reminder(context: ContextTypes.DEFAULT_TYPE):
-    """Every minute — Ping the user 15 minutes before each class."""
+    """Every minute — Ping 15 minutes before each class using cache."""
     global _reminders_sent, _reminders_date, _reminder_logs
     try:
         now   = datetime.now(tz=IST)
@@ -385,16 +506,20 @@ async def job_class_reminder(context: ContextTypes.DEFAULT_TYPE):
         if not (6 <= now.hour < 20):
             return
 
-        session, err = await asyncio.to_thread(erp.get_session)
-        if err:
+        # Fetch timetable from cache (no login!)
+        cache = erp.load_cache()
+        if not cache:
             return
 
-        classes = await asyncio.to_thread(erp.get_cached_today_classes, session)
-        if not isinstance(classes, list):
-            return
+        classes = cache.get("today_classes", [])
 
         for cls in classes:
-            start_time = cls["start_time"]
+            time_str = cls.get("time") or cls.get("time_label")
+            if not time_str:
+                continue
+
+            # Parse start time from the class time label string
+            start_time = erp.parse_time(time_str)
             if start_time is None:
                 continue
 
@@ -409,7 +534,7 @@ async def job_class_reminder(context: ContextTypes.DEFAULT_TYPE):
                         chat_id=TELEGRAM_USER_ID,
                         text=(
                             f"🔔 *Class in ~15 minutes!*\n"
-                            f"📚 *{cls['subject']}* at *{cls['time_label']}*\n"
+                            f"📚 *{cls['subject']}* at *{time_str}*\n"
                             f"_Get ready! 🏃_"
                         ),
                         parse_mode="Markdown",
@@ -426,9 +551,7 @@ async def job_class_reminder(context: ContextTypes.DEFAULT_TYPE):
 
 
 async def job_absent_warning(context: ContextTypes.DEFAULT_TYPE):
-    """
-    8:00 PM IST — Check if the student was marked absent in any class today.
-    """
+    """8:00 PM IST — Scrape ERP to check for absences, compare vs morning percentage."""
     global _morning_attendance_pct
     try:
         now = datetime.now(tz=IST)
@@ -443,32 +566,28 @@ async def job_absent_warning(context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        daily_records = await asyncio.to_thread(erp.get_daily_attendance, session)
-        if daily_records is not None:
-            absent = [r for r in daily_records if "absent" in r.get("status", "").lower()]
-            if absent:
-                lines = "\n".join(
-                    f"❌ *{r['subject']}*" + (f" ({r['time']})" if r.get("time") else "")
-                    for r in absent
-                )
-                msg = (
-                    f"⚠️ *Absent Alert!*\n\n"
-                    f"You were marked *absent* in:\n\n{lines}\n\n"
-                    f"_Contact your faculty if this was a mistake._"
-                )
-            else:
-                msg = "✅ *Great job!* You attended all classes today! 🎉"
+        # Scrape and update the cache file
+        data = await asyncio.to_thread(erp.fetch_and_cache_all, session)
+        if not data:
+            return
+
+        # Strategy 1: Check daily record absence
+        absent_subjects = data.get("absentToday", [])
+        if absent_subjects:
+            lines = "\n".join(f"❌ *{sub}*" for sub in absent_subjects)
+            msg = (
+                f"⚠️ *Absent Alert!*\n\n"
+                f"You were marked *absent* in:\n\n{lines}\n\n"
+                f"_Contact your faculty if this was a mistake._"
+            )
             await context.bot.send_message(
                 chat_id=TELEGRAM_USER_ID, text=msg, parse_mode="Markdown"
             )
             return
 
-        # Fallback to overall % check
-        current = await asyncio.to_thread(erp.get_attendance, session)
-        if not isinstance(current, dict):
-            return
-
-        curr_pct = current.get("percent_val", 0)
+        # Strategy 2: Drop in percentage comparison
+        attendance = data.get("attendance", {})
+        curr_pct = attendance.get("overall", 0.0)
 
         if _morning_attendance_pct is not None:
             drop = _morning_attendance_pct - curr_pct
@@ -477,23 +596,23 @@ async def job_absent_warning(context: ContextTypes.DEFAULT_TYPE):
                 msg = (
                     f"⚠️ *Attendance Drop Detected!*\n\n"
                     f"Morning: *{_morning_attendance_pct:.2f}%* -> Now: *{curr_pct:.2f}%*\n"
-                    f"Current: {emoji} *{current['percent']}* "
-                    f"({current['present']}/{current['total']})\n\n"
+                    f"Current: {emoji} *{attendance.get('percent', '0.0%')}* "
+                    f"({attendance.get('present', 0)}/{attendance.get('total', 0)})\n\n"
                     f"_It looks like you may have missed a class today._"
                 )
             else:
                 emoji = erp.attendance_emoji(curr_pct)
                 msg = (
                     f"✅ *All good!* No attendance drop today!\n"
-                    f"Current: {emoji} *{current['percent']}* "
-                    f"({current['present']}/{current['total']})"
+                    f"Current: {emoji} *{attendance.get('percent', '0.0%')}* "
+                    f"({attendance.get('present', 0)}/{attendance.get('total', 0)})"
                 )
         else:
             emoji = erp.attendance_emoji(curr_pct)
             msg = (
                 f"📊 *Evening Attendance Summary*\n"
-                f"Current: {emoji} *{current['percent']}* "
-                f"({current['present']}/{current['total']})"
+                f"Current: {emoji} *{attendance.get('percent', '0.0%')}* "
+                f"({attendance.get('present', 0)}/{attendance.get('total', 0)})"
             )
 
         await context.bot.send_message(
@@ -527,18 +646,21 @@ def main():
     # Handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("logs",  cmd_logs))
+    app.add_handler(CommandHandler("simulate", cmd_simulate))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     app.add_handler(CallbackQueryHandler(callback_handler))
 
-    # Jobs
+    # Jobs — 7:00 AM IST (01:30 UTC)
     app.job_queue.run_daily(
         job_morning_briefing,
         time=dt_time(1, 30, tzinfo=timezone.utc),
     )
+    # 8:00 PM IST (14:30 UTC)
     app.job_queue.run_daily(
         job_absent_warning,
         time=dt_time(14, 30, tzinfo=timezone.utc),
     )
+    # Class pings check
     app.job_queue.run_repeating(job_class_reminder, interval=60, first=10)
 
     print("Bot started. Listening for messages...")

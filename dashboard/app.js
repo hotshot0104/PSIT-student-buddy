@@ -120,6 +120,7 @@ function showPage(id) {
   if (id === "dashboard") renderDashboard();
   if (id === "timetable") renderTimetable();
   if (id === "attendance") renderAttendance();
+  if (id === "simulator") renderSimulator();
 }
 
 document.querySelectorAll(".nav-item[data-page]").forEach(btn => {
@@ -401,3 +402,152 @@ async function fetchLiveData() {
 
 // ── Boot ──────────────────────────────────────────────────────────
 fetchLiveData();
+
+// ── Bunk Simulator Logic ──────────────────────────────────────────
+let simState = {}; // Holds dynamic simulated edits per subject index
+
+function renderSimulator() {
+  const grid = document.getElementById("simulator-grid");
+  if (!grid) return;
+  grid.innerHTML = "";
+
+  const subjects = DATA.attendance.subjects;
+  
+  // Initialize simulation state if empty or changed
+  subjects.forEach((s, idx) => {
+    if (simState[idx] === undefined) {
+      simState[idx] = { attend: 0, bunk: 0 };
+    }
+  });
+
+  function recalculateAll() {
+    let totalPresent = 0;
+    let totalClasses = 0;
+
+    subjects.forEach((s, idx) => {
+      const state = simState[idx];
+      const p = s.present + state.attend;
+      const t = s.total + state.attend + state.bunk;
+      totalPresent += p;
+      totalClasses += t;
+
+      // Update subject card locally
+      const card = document.getElementById(`sim-card-${idx}`);
+      if (card) {
+        const pct = t > 0 ? (p / t) * 100 : 0.0;
+        const color = attendanceColor(pct);
+        const emoji = attendanceEmoji(pct);
+        
+        card.querySelector(".subject-pct").className = `subject-pct color-${color}`;
+        card.querySelector(".subject-pct").innerHTML = `${emoji} ${pct.toFixed(2)}%`;
+        card.querySelector(".subject-meta span").textContent = `${p} / ${t} classes`;
+        
+        const bar = card.querySelector(".progress-fill");
+        bar.className = `progress-fill fill-${color}`;
+        bar.style.width = `${pct}%`;
+
+        // Update value badges
+        card.querySelector(`.sim-badge-attend`).textContent = state.attend;
+        card.querySelector(`.sim-badge-bunk`).textContent = state.bunk;
+
+        // Update bunk budget descriptor text
+        const budget = calcBunkBudget(p, t);
+        const metaText = card.querySelector(".sim-meta-text");
+        if (budget) {
+          if (budget.canBunk > 0) {
+            metaText.innerHTML = `✅ You can skip <strong>${budget.canBunk}</strong> more class(es).`;
+            metaText.className = "sim-meta-text color-success";
+          } else {
+            metaText.innerHTML = `🚨 Attend <strong>${budget.needAttend}</strong> consecutive class(es) to recover.`;
+            metaText.className = "sim-meta-text color-danger";
+          }
+        }
+      }
+    });
+
+    // Update overall simulated summary
+    const overallPct = totalClasses > 0 ? (totalPresent / totalClasses) * 100 : 0.0;
+    document.getElementById("sim-overall-pct").textContent = `${overallPct.toFixed(2)}%`;
+    
+    const pctColor = attendanceColor(overallPct);
+    document.getElementById("sim-overall-pct").className = `color-${pctColor}`;
+    
+    const statusEl = document.getElementById("sim-overall-status");
+    const verdictEl = document.getElementById("sim-overall-verdict");
+
+    if (overallPct >= 75) {
+      statusEl.textContent = "Safe Zone";
+      statusEl.className = "color-success";
+      verdictEl.textContent = "Your simulated average stays above 75%. Keep it up!";
+    } else if (overallPct >= 65) {
+      statusEl.textContent = "Caution Zone";
+      statusEl.className = "color-warning";
+      verdictEl.textContent = "Close to the line! Attend classes regularly to avoid alerts.";
+    } else {
+      statusEl.textContent = "Critical Danger";
+      statusEl.className = "color-danger";
+      verdictEl.textContent = "Under 75%! You will receive automated warnings and cannot bunk any more.";
+    }
+  }
+
+  // Build the Simulation Cards
+  subjects.forEach((s, idx) => {
+    const card = document.createElement("div");
+    card.className = "subject-card";
+    card.id = `sim-card-${idx}`;
+    
+    const pct = s.percent;
+    const color = attendanceColor(pct);
+    const emoji = attendanceEmoji(pct);
+    const state = simState[idx];
+
+    card.innerHTML = `
+      <div class="subject-name" title="${s.name}">${s.name}</div>
+      <div class="subject-meta">
+        <span>${s.present} / ${s.total} classes</span>
+        <span class="subject-pct color-${color}">${emoji} ${pct.toFixed(2)}%</span>
+      </div>
+      <div class="progress-track" style="margin-bottom:16px;">
+        <div class="progress-fill fill-${color}" style="width: ${pct}%"></div>
+      </div>
+      
+      <!-- Simulation Controls -->
+      <div class="sim-controls">
+        <div class="sim-row">
+          <span class="sim-slider-label">Attend future classes:</span>
+          <div class="sim-slider-wrap">
+            <input type="range" class="sim-slider sim-input-attend" 
+              min="0" max="30" value="${state.attend}" data-idx="${idx}" />
+            <span class="sim-value-badge sim-badge-attend">${state.attend}</span>
+          </div>
+        </div>
+        <div class="sim-row">
+          <span class="sim-slider-label">Bunk future classes:</span>
+          <div class="sim-slider-wrap">
+            <input type="range" class="sim-slider sim-input-bunk" 
+              min="0" max="20" value="${state.bunk}" data-idx="${idx}" />
+            <span class="sim-value-badge sim-badge-bunk">${state.bunk}</span>
+          </div>
+        </div>
+      </div>
+      <div class="sim-meta-text">Drag sliders to simulate budget...</div>
+    `;
+
+    // Sliders event listeners
+    card.querySelector(".sim-input-attend").addEventListener("input", function(e) {
+      simState[idx].attend = parseInt(e.target.value) || 0;
+      recalculateAll();
+    });
+
+    card.querySelector(".sim-input-bunk").addEventListener("input", function(e) {
+      simState[idx].bunk = parseInt(e.target.value) || 0;
+      recalculateAll();
+    });
+
+    grid.appendChild(card);
+  });
+
+  // Perform initial calculation run
+  recalculateAll();
+}
+

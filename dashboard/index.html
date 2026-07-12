@@ -42,6 +42,9 @@
     <button class="nav-item" data-page="attendance" id="nav-attendance">
       <span class="nav-icon">📊</span> Attendance
     </button>
+    <button class="nav-item" data-page="simulator" id="nav-simulator">
+      <span class="nav-icon">🔮</span> Bunk Simulator
+    </button>
 
     <div class="nav-section-label" style="margin-top:20px">Account</div>
 
@@ -188,6 +191,35 @@
       </div>
     </div>
     <!-- ─── END ATTENDANCE PAGE ─── -->
+
+
+    <!-- ─── SIMULATOR PAGE ────────────────────────────────────────────── -->
+    <div class="page" id="page-simulator">
+      <div class="page-header">
+        <div>
+          <h2>Bunk Simulator & Predictor</h2>
+          <p>Drag the sliders to predict how skipping or attending future classes will affect your attendance.</p>
+        </div>
+      </div>
+
+      <!-- Simulation Summary Stats -->
+      <div class="card" style="margin-bottom:20px;display:flex;gap:32px;align-items:center;flex-wrap:wrap;background:rgba(124,58,237,0.06);border-color:rgba(124,58,237,0.25);">
+        <div>
+          <div class="card-title">Simulated Overall Attendance</div>
+          <div style="font-size:36px;font-weight:800;" id="sim-overall-pct">78.5%</div>
+        </div>
+        <div style="color:var(--text-2);font-size:13px;line-height:2;">
+          <div>🔴 <strong id="sim-overall-status">Safe Zone</strong></div>
+          <div id="sim-overall-verdict">Your simulated status stays safe.</div>
+        </div>
+      </div>
+
+      <!-- Simulated subjects list -->
+      <div class="attendance-grid" id="simulator-grid">
+        <!-- Populated dynamically by app.js -->
+      </div>
+    </div>
+    <!-- ─── END SIMULATOR PAGE ─── -->
 
 
     <!-- ─── SETTINGS PAGE ───────────────────────────────────────────── -->

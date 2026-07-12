@@ -466,3 +466,136 @@ def attendance_emoji(percent_val):
             return "🚨"
     except (ValueError, AttributeError):
         return "❓"
+
+
+# ─────────────────────────────────────────
+# LOCAL CACHING & RELOCATION FINDER
+# ─────────────────────────────────────────
+
+import json
+
+CACHE_FILE = "erp_cache.json"
+
+def load_cache():
+    """Load cached ERP data from file."""
+    if os.path.exists(CACHE_FILE):
+        try:
+            with open(CACHE_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading cache: {e}")
+    return None
+
+def save_cache(data):
+    """Save ERP data to local cache file."""
+    try:
+        with open(CACHE_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        print(f"Error saving cache: {e}")
+        return False
+
+def fetch_and_cache_all(session):
+    """
+    Log in, scrape all data (timetable, attendance, daily progress),
+    compare with previous cache for relocations/swaps, and update the cache.
+    """
+    print("🔄 Initiating scheduled ERP scrape and caching...")
+    
+    # Load old cache to check for changes/relocations
+    old_cache = load_cache()
+
+    # 1. Fetch attendance
+    attendance = get_attendance(session)
+    if isinstance(attendance, str):
+        print(f"Error fetching attendance: {attendance}")
+        return None
+
+    # 2. Fetch today's classes
+    day_name, classes = get_today_classes(session)
+
+    # 3. Fetch weekly timetable
+    week_tt = get_week_timetable(session)
+
+    # 4. Fetch daily slot attendance
+    daily_attendance = get_daily_attendance(session)
+
+    # Format weekly timetable for storage
+    formatted_week = {}
+    if isinstance(week_tt, list):
+        for day, cls_list in week_tt:
+            if isinstance(cls_list, list):
+                formatted_week[day] = [
+                    {"time": c["time_label"], "subject": c["subject"]} for c in cls_list
+                ]
+
+    # Detect swaps or relocations compared to standard weekly schedule
+    # Standard schedule for today is what is listed in the weekly timetable for this day
+    standard_today = formatted_week.get(day_name, [])
+    relocations = []
+    
+    # We compare standard schedule for today against the actual today's schedule
+    if isinstance(classes, list):
+        # Build simple lookups
+        standard_lookup = {c["time"]: c["subject"] for c in standard_today}
+        actual_lookup = {c["time_label"]: c["subject"] for c in classes if c.get("time_label")}
+        
+        # Check if any standard slot has been swapped/changed
+        for time_slot, subj in actual_lookup.items():
+            std_subj = standard_lookup.get(time_slot)
+            if std_subj and std_subj != subj:
+                relocations.append({
+                    "time": time_slot,
+                    "original": std_subj,
+                    "new": subj,
+                    "type": "swap"
+                })
+        
+        # Check for added or cancelled slots
+        for time_slot in actual_lookup:
+            if time_slot not in standard_lookup:
+                relocations.append({
+                    "time": time_slot,
+                    "original": "Free Slot",
+                    "new": actual_lookup[time_slot],
+                    "type": "addition"
+                })
+
+    data = {
+        "last_updated": datetime.now(tz=IST).isoformat(),
+        "student": {
+            "name": ERP_USER,
+            "roll": ERP_USER,
+            "branch": "PSIT Student"
+        },
+        "attendance": {
+            "overall": attendance.get("percent_val", 0.0),
+            "percent": attendance.get("percent", "0.0%"),
+            "present": attendance.get("present", 0),
+            "total": attendance.get("total", 0),
+            "subjects": [
+                {
+                    "name": s["subject"],
+                    "percent": float(s["percent"].replace("%", "")) if s["percent"] else 0.0,
+                    "present": int(s["present"]) if s["present"] else 0,
+                    "total": int(s["total"]) if s["total"] else 0
+                }
+                for s in attendance.get("subjects", [])
+            ]
+        },
+        "timetable": formatted_week,
+        "today_classes": [
+            {"time": c["time_label"], "subject": c["subject"]}
+            for c in classes
+        ] if isinstance(classes, list) else [],
+        "absentToday": [
+            r["subject"] for r in daily_attendance if "absent" in r.get("status", "").lower()
+        ] if daily_attendance else [],
+        "relocations": relocations
+    }
+
+    save_cache(data)
+    print("✅ ERP data successfully scraped and cached.")
+    return data
+
