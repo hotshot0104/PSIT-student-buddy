@@ -1,76 +1,125 @@
-# 🤖 PSIT ERP Discord Bot
+# 🎓 PSIT Student Buddy
 
-A powerful Discord bot designed to automate your PSIT ERP life. Get your timetable, check your attendance, and calculate your "bunk budget" directly from Discord.
+A full-featured academic assistant for PSIT students — delivered through a **Telegram bot** and a beautiful **web dashboard**.
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![Discord.js](https://img.shields.io/badge/Discord.py-2.0+-5865F2?style=for-the-badge&logo=discord&logoColor=white)
+![Telegram](https://img.shields.io/badge/Telegram-Bot-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)
 
 ---
 
 ## ✨ Features
 
-- 🌅 **Morning Briefing:** Automatically sends your daily timetable and current attendance every morning at 7:00 AM IST.
-- 🔔 **Smart Reminders:** Pings you exactly 15 minutes before each class starts so you're never late.
-- 📊 **Attendance Tracking:** Real-time overall attendance fetching from the ERP.
-- 📉 **Bunk Budget:** Calculates exactly how many classes you can skip while staying above 75%, or how many you need to attend to recover.
-- ⚡ **Session Caching:** Optimized login logic to avoid repeated authentication and potential ERP lockouts.
+| Feature | Description |
+|---|---|
+| ☀️ **Morning Briefing** | Sends your daily timetable + attendance automatically at **7:00 AM IST** |
+| 🔔 **Smart Reminders** | Pings you **15 minutes** before each class starts |
+| ⚠️ **Absent Warning** | Checks at **8:00 PM IST** if you were marked absent in any lecture and alerts you |
+| 📊 **Attendance Tracking** | Overall + subject-wise attendance fetched live from ERP |
+| 📉 **Bunk Budget** | Calculates exactly how many classes you can skip while staying above 75% |
+| 🗓️ **Full Timetable** | View your entire week's schedule at a glance |
+| ⚡ **Session Caching** | Smart login logic — re-authenticates only when needed |
+| 🌐 **Web Dashboard** | Beautiful dark-mode UI showing attendance gauge, timeline, and weekly schedule |
 
 ---
 
-## 🛠️ Commands
+## 🤖 Telegram Bot Commands
 
-Everything you need is just a slash-less command away:
+The bot uses a **persistent reply keyboard** — no typing needed, just tap buttons!
 
-| Command | Description |
-| :--- | :--- |
-| `!today` | Displays today's schedule. |
-| `!tomorrow` | Sneak peek into tomorrow's classes. |
-| `!attendance` | Shows your overall attendance percentage. |
-| `!bunk` | Your current "skip allowance" or "recovery path". |
-| `!help` | Shows the command list. |
+| Button | What it does |
+|---|---|
+| 📅 Today | Today's class schedule |
+| 📆 Tomorrow | Tomorrow's classes |
+| 📊 Attendance | Overall + subject-wise attendance |
+| 📉 Bunk Budget | Classes you can skip / need to attend |
+| 🗓️ This Week | Full weekly timetable |
+| ⚙️ Settings | View current bot configuration |
+| ❓ Help | Command reference |
+| 📜 Logs | Today's reminder activity log |
 
 ---
 
 ## 🚀 Getting Started
 
-### 1. Prerequisites
-- Python 3.10 or higher.
-- A Discord Bot Token (Get it from the [Discord Developer Portal](https://discord.com/developers/applications)).
-- Your PSIT ERP Credentials.
+### Step 1 — Prerequisites
+- Python 3.10 or higher
+- A Telegram account
+- Your PSIT ERP credentials
 
-### 2. Local Setup
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/Sameer010405/psitbot.git
-   cd psitbot
-   ```
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-3. Create a `.env` file in the root directory and add your credentials:
-   ```env
-   ERP_USER="your_roll_number"
-   ERP_PASSWORD="your_erp_password"
-   DISCORD_TOKEN="your_bot_token"
-   DISCORD_USER_ID="your_discord_id"
-   ```
-4. Run the bot:
-   ```bash
-   python bot2.0.py
-   ```
+### Step 2 — Install dependencies
+```bash
+pip install -r requirements.txt
+```
+
+### Step 3 — Create a Telegram Bot
+1. Open Telegram and message **[@BotFather](https://t.me/BotFather)**
+2. Send `/newbot` and follow the prompts
+3. Copy your **bot token**
+
+### Step 4 — Get your Telegram User ID
+1. Message **[@userinfobot](https://t.me/userinfobot)** on Telegram
+2. It will reply with your numeric User ID
+
+### Step 5 — Set up your `.env` file
+Create a `.env` file in the project root:
+```env
+ERP_USER=your_roll_number
+ERP_PASSWORD=your_erp_password
+TELEGRAM_BOT_TOKEN=123456:ABCdef...
+TELEGRAM_USER_ID=987654321
+```
+
+### Step 6 — Run the bot
+```bash
+python telegram_bot.py
+```
+You'll see `✅ Bot started. Listening for messages...`  
+Then open Telegram, find your bot, and send `/start`.
 
 ---
 
-## 📱 Run on Mobile (Termux)
+## 🌐 Web Dashboard
 
-Check the [SETUP.md](./SETUP.md) for a detailed guide on how to keep the bot running 24/7 on your Android device using Termux.
+Open `dashboard/index.html` in any browser — no server required.
+
+The dashboard shows:
+- **Radial attendance gauge** — color-coded (green / amber / red)
+- **Today's class timeline** — with past / current / upcoming indicators
+- **Bunk budget** — at a glance
+- **Absent alert banner** — shown when the bot detects an absence
+- **Weekly timetable** — grid view for all 6 days
+- **Subject-wise attendance** — progress bars per subject
+- **Settings** — store credentials locally
+
+---
+
+## 📱 Run 24/7 on Termux (Android)
+
+See [SETUP.md](./SETUP.md) for a complete guide to keeping the bot running on your Android phone using Termux.
+
+---
+
+## 🗂️ Project Structure
+
+```
+students-best-buddy/
+├── erp.py              ← ERP scraper core (login, timetable, attendance)
+├── telegram_bot.py     ← Telegram bot with scheduled jobs
+├── dashboard/
+│   ├── index.html      ← Web dashboard
+│   ├── style.css       ← Dark glassmorphism styles
+│   └── app.js          ← Dashboard logic & data
+├── requirements.txt
+├── README.md
+├── SETUP.md
+└── .env                ← Your credentials (gitignored)
+```
 
 ---
 
 ## ⚠️ Disclaimer
 
-This bot is an unofficial tool and is not affiliated with PSIT in any way. It is intended for educational purposes and personal use. Use it responsibly and do not share your credentials with anyone.
+This is an unofficial tool, not affiliated with PSIT. Intended for personal academic use only. Never share your ERP credentials with anyone.
 
 ---
 

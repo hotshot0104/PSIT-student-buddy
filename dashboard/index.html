@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PSIT Student Buddy — Dashboard</title>
+  <meta name="description" content="Smart dashboard for PSIT students. Track attendance, timetable, and bunk budget in real time." />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>" />
+</head>
+<body>
+
+<!-- Animated background orbs -->
+<div class="bg-orbs" aria-hidden="true">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div class="layout">
+
+  <!-- ═══════════════════════════════ SIDEBAR ═════════════════════════════ -->
+  <aside class="sidebar" role="navigation" aria-label="Main navigation">
+
+    <div class="sidebar-logo">
+      <div class="logo-icon" aria-hidden="true">🎓</div>
+      <h1>
+        Student Buddy
+        <small>PSIT Portal</small>
+      </h1>
+    </div>
+
+    <div class="nav-section-label">Main</div>
+
+    <button class="nav-item active" data-page="dashboard" id="nav-dashboard">
+      <span class="nav-icon">🏠</span> Dashboard
+    </button>
+    <button class="nav-item" data-page="timetable" id="nav-timetable">
+      <span class="nav-icon">🗓️</span> Timetable
+    </button>
+    <button class="nav-item" data-page="attendance" id="nav-attendance">
+      <span class="nav-icon">📊</span> Attendance
+    </button>
+
+    <div class="nav-section-label" style="margin-top:20px">Account</div>
+
+    <button class="nav-item" data-page="settings" id="nav-settings">
+      <span class="nav-icon">⚙️</span> Settings
+    </button>
+
+    <div class="sidebar-footer">
+      <div class="bot-status">
+        <div class="status-dot"></div>
+        Telegram bot running
+      </div>
+    </div>
+  </aside>
+  <!-- ════════════════════════════ END SIDEBAR ════════════════════════════ -->
+
+  <!-- ══════════════════════════ MAIN CONTENT ══════════════════════════════ -->
+  <main class="main">
+
+    <!-- ─── DASHBOARD PAGE ───────────────────────────────────────────── -->
+    <div class="page active" id="page-dashboard">
+
+      <div class="page-header">
+        <div>
+          <h2 id="greeting">Good morning! 👋</h2>
+          <p id="student-info">Loading student info...</p>
+        </div>
+        <div class="live-clock" id="clock" aria-live="polite">Loading...</div>
+      </div>
+
+      <!-- Absent alert banner (shown when bot detects an absence) -->
+      <div class="absent-banner hidden" id="absent-banner" role="alert">
+        <div class="banner-icon">⚠️</div>
+        <div>
+          <h3>Absent Alert — Check Attendance!</h3>
+          <p id="absent-subjects">Detecting absences...</p>
+        </div>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="dashboard-grid">
+
+        <!-- Attendance Gauge -->
+        <div class="card">
+          <div class="card-title">Overall Attendance</div>
+          <div class="gauge-wrap">
+            <div class="gauge-svg">
+              <svg width="180" height="180" viewBox="0 0 180 180" aria-label="Attendance gauge">
+                <!-- Track circle -->
+                <circle cx="90" cy="90" r="70"
+                  fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="12"/>
+                <!-- Progress arc — starts at top (rotate -90deg) -->
+                <circle id="gauge-fill" cx="90" cy="90" r="70"
+                  fill="none" stroke="#10b981" stroke-width="12"
+                  stroke-linecap="round"
+                  stroke-dasharray="0 440"
+                  transform="rotate(-90 90 90)"/>
+              </svg>
+              <div class="gauge-center">
+                <div class="gauge-pct color-success" id="gauge-pct">0%</div>
+                <div class="gauge-label">Attendance</div>
+              </div>
+            </div>
+            <div class="gauge-stats">
+              <div>
+                <strong id="gauge-present">—</strong>
+                Present
+              </div>
+              <div>
+                <strong id="gauge-total">—</strong>
+                Total
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bunk Budget -->
+        <div class="card">
+          <div class="card-title">Bunk Budget</div>
+          <div class="bunk-big color-success" id="bunk-count">—</div>
+          <div class="bunk-label" id="bunk-label">classes you can still skip</div>
+          <div class="bunk-recover" id="bunk-recover" style="display:none"></div>
+          <p style="font-size:12px;color:var(--text-3);margin-top:12px">
+            Minimum 75% attendance required by PSIT.
+          </p>
+        </div>
+
+        <!-- Today's Classes -->
+        <div class="card card-wide">
+          <div class="card-title">Today's Classes</div>
+          <div class="timeline" id="today-timeline">
+            <div style="color:var(--text-3);font-size:13px">Loading timetable...</div>
+          </div>
+        </div>
+
+      </div><!-- /dashboard-grid -->
+    </div>
+    <!-- ─── END DASHBOARD PAGE ─── -->
+
+
+    <!-- ─── TIMETABLE PAGE ───────────────────────────────────────────── -->
+    <div class="page" id="page-timetable">
+      <div class="page-header">
+        <div>
+          <h2>Weekly Timetable</h2>
+          <p>Your full class schedule for this week</p>
+        </div>
+        <div class="live-clock" id="clock-tt" aria-live="polite"></div>
+      </div>
+      <div class="card">
+        <div class="week-grid" id="week-grid">
+          <!-- Populated by app.js -->
+        </div>
+      </div>
+    </div>
+    <!-- ─── END TIMETABLE PAGE ─── -->
+
+
+    <!-- ─── ATTENDANCE PAGE ─────────────────────────────────────────── -->
+    <div class="page" id="page-attendance">
+      <div class="page-header">
+        <div>
+          <h2>Attendance Detail</h2>
+          <p>Subject-wise attendance breakdown</p>
+        </div>
+        <div class="live-clock" aria-live="polite"></div>
+      </div>
+
+      <!-- Overall summary strip -->
+      <div class="card" style="margin-bottom:20px;display:flex;gap:32px;align-items:center;flex-wrap:wrap;">
+        <div>
+          <div class="card-title">Overall</div>
+          <div style="font-size:36px;font-weight:800;" id="att-overall-pct">78.5%</div>
+        </div>
+        <div style="color:var(--text-2);font-size:13px;line-height:2;">
+          <div>🟢 ≥ 75% — Safe zone</div>
+          <div>🟡 65–74% — Caution — attend regularly</div>
+          <div>🔴 &lt; 65% — Critical — do not miss any class</div>
+        </div>
+      </div>
+
+      <div class="attendance-grid" id="attendance-grid">
+        <!-- Populated by app.js -->
+      </div>
+    </div>
+    <!-- ─── END ATTENDANCE PAGE ─── -->
+
+
+    <!-- ─── SETTINGS PAGE ───────────────────────────────────────────── -->
+    <div class="page" id="page-settings">
+      <div class="page-header">
+        <div>
+          <h2>Settings</h2>
+          <p>Configure your ERP credentials and notification preferences</p>
+        </div>
+      </div>
+
+      <div class="card settings-card">
+        <form id="settings-form" autocomplete="off">
+          <div class="field-group">
+            <label class="field-label" for="inp-erp-user">ERP Roll Number</label>
+            <input id="inp-erp-user" class="field-input" type="text"
+              placeholder="e.g. 2200270130035" autocomplete="username" />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="inp-erp-pass">ERP Password</label>
+            <input id="inp-erp-pass" class="field-input" type="password"
+              placeholder="Your ERP password" autocomplete="current-password" />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="inp-tg-id">Telegram User ID</label>
+            <input id="inp-tg-id" class="field-input" type="text"
+              placeholder="e.g. 987654321" />
+          </div>
+          <div class="field-group">
+            <label class="field-label" for="inp-remind">Reminder (minutes before class)</label>
+            <input id="inp-remind" class="field-input" type="number"
+              value="15" min="1" max="60" />
+          </div>
+          <button type="submit" class="btn-primary" id="save-btn">Save Settings</button>
+        </form>
+
+        <div class="settings-info">
+          ℹ️ Credentials are stored locally in your browser and in the <code>.env</code> file
+          for the Python bot. They are never sent to any external server.<br /><br />
+          The Telegram bot reads the <code>.env</code> file directly. After changing credentials
+          here, update your <code>.env</code> and restart <code>telegram_bot.py</code>.
+        </div>
+      </div>
+    </div>
+    <!-- ─── END SETTINGS PAGE ─── -->
+
+  </main>
+  <!-- ════════════════════════ END MAIN CONTENT ════════════════════════════ -->
+
+</div><!-- /layout -->
+
+<script src="app.js"></script>
+</body>
+</html>
