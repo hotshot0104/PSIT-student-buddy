@@ -416,7 +416,6 @@ body {
   grid-template-columns: repeat(6, 1fr);
   gap: 12px;
 }
-.day-col { }
 .day-header {
   text-align: center;
   padding: 10px 6px;

@@ -104,21 +104,36 @@ def serve_static(path):
 
 @app.route('/api/data')
 def get_live_data():
-    """Fetch data from local cache, or scrape once if cache is missing."""
+    """Fetch data from local cache, or scrape once if cache is missing or stale."""
     cache = erp.load_cache()
-    if cache:
-        # Check if cache is for the current ERP user. If not, ignore it and re-fetch.
-        if cache.get("student", {}).get("roll") == erp.ERP_USER:
+    is_today = False
+    if cache and cache.get("student", {}).get("roll") == erp.ERP_USER:
+        last_updated_str = cache.get("last_updated")
+        if last_updated_str:
+            try:
+                from datetime import datetime
+                last_updated = datetime.fromisoformat(last_updated_str).astimezone(erp.IST)
+                if last_updated.date() == datetime.now(tz=erp.IST).date():
+                    is_today = True
+            except Exception:
+                pass
+        if is_today:
             print("💾 Serving dashboard data from local cache.")
             return jsonify(cache)
 
-    print("🔄 Cache missing or outdated. Scraping from ERP...")
+    print("🔄 Cache missing or outdated/stale. Scraping from ERP...")
     session, err = erp.get_session()
     if err:
+        if cache and cache.get("student", {}).get("roll") == erp.ERP_USER:
+            print("⚠️ Scraping failed, serving stale cache as fallback.")
+            return jsonify(cache)
         return jsonify({"error": err}), 500
 
     data = erp.fetch_and_cache_all(session)
     if data is None:
+        if cache and cache.get("student", {}).get("roll") == erp.ERP_USER:
+            print("⚠️ Scraping failed, serving stale cache as fallback.")
+            return jsonify(cache)
         return jsonify({"error": "Failed to scrape data."}), 500
 
     return jsonify(data)

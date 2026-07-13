@@ -74,15 +74,28 @@ def is_authorized(update: Update) -> bool:
 async def _get_cached_data_or_scrape() -> dict:
     """Read the local cache, or trigger a scrape if missing/stale."""
     cache = erp.load_cache()
+    is_today = False
     if cache and cache.get("student", {}).get("roll") == erp.ERP_USER:
-        return cache
+        last_updated_str = cache.get("last_updated")
+        if last_updated_str:
+            try:
+                last_updated = datetime.fromisoformat(last_updated_str).astimezone(IST)
+                if last_updated.date() == datetime.now(tz=IST).date():
+                    is_today = True
+            except Exception:
+                pass
+        if is_today:
+            return cache
 
-    # Fallback: scrape once to initialize cache
-    session, err = erp.get_session()
+    # Fallback: scrape once to initialize/refresh cache
+    session, err = await asyncio.to_thread(erp.get_session)
     if not err:
-        data = erp.fetch_and_cache_all(session)
+        data = await asyncio.to_thread(erp.fetch_and_cache_all, session)
         if data:
             return data
+
+    if cache and cache.get("student", {}).get("roll") == erp.ERP_USER:
+        return cache
     return {}
 
 def _clean_subject_str(subject_str: str) -> str:

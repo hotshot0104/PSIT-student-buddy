@@ -485,7 +485,27 @@ def load_cache():
     if os.path.exists(CACHE_FILE):
         try:
             with open(CACHE_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+            if isinstance(data, dict):
+                last_updated_str = data.get("last_updated")
+                if last_updated_str:
+                    try:
+                        last_updated = datetime.fromisoformat(last_updated_str).astimezone(IST)
+                        now = datetime.now(tz=IST)
+                        if last_updated.date() != now.date():
+                            day_name = now.strftime("%A")
+                            timetable = data.get("timetable", {})
+                            standard_classes = timetable.get(day_name, [])
+                            new_today = []
+                            for c in standard_classes:
+                                new_today.append({
+                                    "time": c.get("time"),
+                                    "subject": c.get("subject")
+                                })
+                            data["today_classes"] = new_today
+                    except Exception as e:
+                        print(f"Error adjusting today_classes: {e}")
+            return data
         except Exception as e:
             print(f"Error loading cache: {e}")
     return None

@@ -1,5 +1,5 @@
 {
-  "last_updated": "2026-07-12T16:57:21.734796+05:30",
+  "last_updated": "2026-07-13T11:44:41.263605+05:30",
   "student": {
     "name": "2401640130049",
     "roll": "2401640130049",
@@ -8,8 +8,8 @@
   "attendance": {
     "overall": 100.0,
     "percent": "100.00%",
-    "present": 40,
-    "total": 40,
+    "present": 42,
+    "total": 42,
     "subjects": [
       {
         "name": "BCS-055 (Piyush Bhushan Singh)",
@@ -294,7 +294,40 @@
     ],
     "Saturday": []
   },
-  "today_classes": [],
+  "today_classes": [
+    {
+      "time": "1st09.25-10.15",
+      "subject": "[ Ashish Tripathi ][ BCS-502 ][ L-23 ][ G ]"
+    },
+    {
+      "time": "2nd10.15-11.05",
+      "subject": "[ Esha Tripathi ][ BCS-501 ][ L-23 ][ G ]"
+    },
+    {
+      "time": "3rd11.15-12.05",
+      "subject": "[ Syed Ali Hussain Rizvi ][ TT-FSD-501 ][ J-14 ][ G ]"
+    },
+    {
+      "time": "4th12.05-12.55",
+      "subject": "[ Syed Ali Hussain Rizvi ][ TT-FSD-501 ][ J-14 ][ G ]"
+    },
+    {
+      "time": "5th01.45-02.30",
+      "subject": "[ Sweta Sri ][ BCS-551 ][ L-31-32 ][ G ]"
+    },
+    {
+      "time": "6th02.30-03.15",
+      "subject": "[ Sweta Sri ][ BCS-551 ][ L-31-32 ][ G ]"
+    },
+    {
+      "time": "7th03.25-4.10",
+      "subject": "[ Satyam Kumar ][ TT-HD-5 ][ J-14 ][ G ]"
+    },
+    {
+      "time": "8th04.10-04.55",
+      "subject": "[ Satyam Kumar ][ TT-HD-5 ][ J-14 ][ G ]"
+    }
+  ],
   "absentToday": [],
   "relocations": []
 }
